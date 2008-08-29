@@ -95,6 +95,7 @@ TOKEN :
   | <REPEATED:"repeated">
   | <RETURNS:"returns">
   | <TO:"to">
+  | <MAX:"max">
 
   | <LBRACE: "{">
   | <RBRACE: "}">
@@ -107,8 +108,33 @@ TOKEN :
   | <PERIOD: ".">
   | <COMMA: ",">
   
-  | <NUMBER: (["0"-"9"])+>
-  | <STRING: "\"" ( ~["\""] )+ "\"">
+  | < INTEGER: ("-")? (
+        <DECIMAL_LITERAL> (["l","L"])?
+      | <HEX_LITERAL> (["l","L"])?
+      | <OCTAL_LITERAL> (["l","L"])? 
+    ) >
+  | < #DECIMAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+  | < #HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+ >
+  | < #OCTAL_LITERAL: "0" (["0"-"7"])* >
+  | < FLOAT: ("-")? (
+        (["0"-"9"])+ "." (["0"-"9"])* (<EXPONENT>)? (["f","F","d","D"])?
+      | "." (["0"-"9"])+ (<EXPONENT>)? (["f","F","d","D"])?
+      | (["0"-"9"])+ <EXPONENT> (["f","F","d","D"])?
+      | (["0"-"9"])+ (<EXPONENT>)? ["f","F","d","D"]
+    )>
+  | < #EXPONENT: ["e","E"] (["+","-"])? (["0"-"9"])+ >
+  | <STRING:
+      "\""
+      (   (~["\"","\\","\n","\r"])
+        | ("\\"
+            ( ["a","v","n","t","b","r","f","\\","'","\""]
+            | ["x","X"]["0"-"9","A"-"F","a"-"f"]["0"-"9","A"-"F","a"-"f"]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )*
+      "\"">
   | <ID: ["A"-"Z","a"-"z"] (["a"-"z","A"-"Z","0"-"9","_"])*>
 }
 
@@ -131,10 +157,9 @@ ProtoDescriptor ProtoDescriptor() :
     String o;
 }
 {
-	(
-		<PACKAGE> packageName=PackageID() <SEMICOLON>
-	)?
     (
+		<PACKAGE> packageName=PackageID() <SEMICOLON>
+	|	
         <OPTION> optionD = OptionDescriptor(proto) <SEMICOLON>
         { opts.put(optionD.getName(),optionD); }
     |   
@@ -165,6 +190,138 @@ ProtoDescriptor ProtoDescriptor() :
     	proto.setServices(services);
     	proto.setExtends(extendsList);
     	return proto; 
+    }
+}
+
+
+MessageDescriptor MessageDescriptor(ProtoDescriptor proto) :
+{
+    String name;
+    LinkedHashMap<String,FieldDescriptor> fields = new LinkedHashMap<String,FieldDescriptor>();
+    LinkedHashMap<String,MessageDescriptor> messages = new LinkedHashMap<String,MessageDescriptor>();
+    LinkedHashMap<String,EnumDescriptor> enums = new LinkedHashMap<String,EnumDescriptor>();
+    ArrayList<ExtendDescriptor> extendsList = new ArrayList<ExtendDescriptor>();
+    LinkedHashMap<String,OptionDescriptor> opts = new LinkedHashMap<String,OptionDescriptor>();
+
+    OptionDescriptor optionD;
+    ExtensionsDescriptor extensionsD=null;
+	FieldDescriptor fieldD;
+	MessageDescriptor messageD;
+	EnumDescriptor enumD;
+	ExtendDescriptor extendD;
+}
+{
+    <MESSAGE> name = ID() <LBRACE>
+    (
+        <OPTION> optionD = OptionDescriptor(proto) <SEMICOLON>
+        { opts.put(optionD.getName(),optionD); }
+	|	
+    	fieldD = FieldDescriptor(proto)
+    	{ fields.put(fieldD.getName(), fieldD); }
+    |   
+        messageD = MessageDescriptor(proto) (<SEMICOLON>)?
+        { messages.put(messageD.getName(),messageD); }
+    |   
+        enumD = EnumDescriptor(proto) (<SEMICOLON>)?
+        { enums.put(enumD.getName(), enumD); }
+    |   
+        extensionsD = ExtensionsDescriptor(proto) <SEMICOLON>
+    |   
+        extendD = ExtendDescriptor(proto) (<SEMICOLON>)?
+        { extendsList.add(extendD); }
+    )*
+    <RBRACE>
+    {
+    	MessageDescriptor rc = new MessageDescriptor(proto);
+    	rc.setName(name);
+    	rc.setFields(fields);
+    	rc.setMessages(messages);
+    	rc.setEnums(enums);
+    	rc.setExtensions(extensionsD);
+    	rc.setOptions(opts);
+    	return rc;
+    }
+}
+
+/**
+ * Parses something like:
+ * optional string foo = 1;
+ */
+FieldDescriptor FieldDescriptor(ProtoDescriptor proto) :
+{
+    String rule;
+    String type;
+    String name;
+    int tag;
+    LinkedHashMap<String,OptionDescriptor> opts = new LinkedHashMap<String,OptionDescriptor>();
+    LinkedHashMap<String,FieldDescriptor> fields = new LinkedHashMap<String,FieldDescriptor>();
+    OptionDescriptor optionD;
+	FieldDescriptor fieldD;
+	FieldDescriptor rc;
+}
+{
+
+    rule = Rule()
+    (
+        // We have to go through the look ahead trouble because based on if 'type' is 'group' 
+        // we need to look ahead to see if it looks like a group declaration instead it being 
+        // message type called group.
+        
+	    LOOKAHEAD(5)
+		type = PackageID()
+	    name = ID()
+	    <EQUALS>
+	    tag = Integer()
+	    (
+	    	<LBRACKET>
+	    	optionD = OptionDescriptor(proto)
+	    	{
+	    		opts.put(optionD.getName(), optionD);
+	    	}
+	    	(
+	    		<COMMA>
+		    	optionD = OptionDescriptor(proto)
+		    	{
+	    			opts.put(optionD.getName(), optionD);
+	    		}
+	    	)*
+	    	<RBRACKET>
+	    )?
+	    <SEMICOLON>    
+	    {
+	    	FieldDescriptor t = new FieldDescriptor(proto);
+	    	t.setName(name);
+	    	t.setType(type);
+	    	t.setRule(rule);
+	    	t.setTag(tag);
+	    	t.setOptions(opts);
+	    	rc=t;
+	    }
+    	|
+		<GROUP>
+	    name = ID()
+	    <EQUALS>
+	    tag = Integer()
+	    <LBRACE>
+	    (
+	       	fieldD = FieldDescriptor(proto)
+	    	{ fields.put(fieldD.getName(), fieldD); }
+	    )*
+	    <RBRACE> 
+	    ( <SEMICOLON> )?  
+	    {
+	    	GroupDescriptor t = new GroupDescriptor(proto);
+	    	t.setName(name);
+	    	t.setType("group");
+	    	t.setRule(rule);
+	    	t.setTag(tag);
+	    	t.setOptions(opts);
+	    	t.setFields(fields);
+	    	rc=t;
+	    }
+    )
+    {
+		return rc;
     }
 }
 
@@ -246,49 +403,6 @@ ExtendDescriptor ExtendDescriptor(ProtoDescriptor proto) :
     }
 }
 
-MessageDescriptor MessageDescriptor(ProtoDescriptor proto) :
-{
-    String name;
-    LinkedHashMap<String,FieldDescriptor> fields = new LinkedHashMap<String,FieldDescriptor>();
-    LinkedHashMap<String,MessageDescriptor> messages = new LinkedHashMap<String,MessageDescriptor>();
-    LinkedHashMap<String,EnumDescriptor> enums = new LinkedHashMap<String,EnumDescriptor>();
-    ArrayList<ExtendDescriptor> extendsList = new ArrayList<ExtendDescriptor>();
-
-    ExtensionsDescriptor extensionsD=null;
-	FieldDescriptor fieldD;
-	MessageDescriptor messageD;
-	EnumDescriptor enumD;
-	ExtendDescriptor extendD;
-}
-{
-    <MESSAGE> name = ID() <LBRACE>
-    (
-    	fieldD = FieldDescriptor(proto) <SEMICOLON>
-    	{ fields.put(fieldD.getName(), fieldD); }
-    |   
-        messageD = MessageDescriptor(proto) (<SEMICOLON>)?
-        { messages.put(messageD.getName(),messageD); }
-    |   
-        enumD = EnumDescriptor(proto) (<SEMICOLON>)?
-        { enums.put(enumD.getName(), enumD); }
-    |   
-        extensionsD = ExtensionsDescriptor(proto) <SEMICOLON>
-    |   
-        extendD = ExtendDescriptor(proto) (<SEMICOLON>)?
-        { extendsList.add(extendD); }
-    )*
-    <RBRACE>
-    {
-    	MessageDescriptor rc = new MessageDescriptor(proto);
-    	rc.setName(name);
-    	rc.setFields(fields);
-    	rc.setMessages(messages);
-    	rc.setEnums(enums);
-    	rc.setExtensions(extensionsD);
-    	return rc;
-    }
-}
-
 ExtensionsDescriptor ExtensionsDescriptor(ProtoDescriptor proto) :
 {
 	int first;
@@ -298,7 +412,14 @@ ExtensionsDescriptor ExtensionsDescriptor(ProtoDescriptor proto) :
     <EXTENSIONS> 
     first = Integer() 
     <TO> 
-    last = Integer() 
+    (
+    	last = Integer()
+    	|
+    	<MAX>
+    	{
+    		last=536870911;
+    	}
+    )
     {
     	ExtensionsDescriptor rc = new ExtensionsDescriptor(proto);
     	rc.setFirst(first);
@@ -352,58 +473,12 @@ EnumFieldDescriptor EnumFieldDescriptor(ProtoDescriptor proto) :
     }
 }
 
-/**
- * Parses something like:
- * optional string foo = 1;
- */
-FieldDescriptor FieldDescriptor(ProtoDescriptor proto) :
-{
-    String rule;
-    String type;
-    String name;
-    int tag;
-    LinkedHashMap<String,OptionDescriptor> opts = new LinkedHashMap<String,OptionDescriptor>();
-    OptionDescriptor optionD;
-}
-{
-
-    rule = Rule()
-    type = PackageID()
-    name = ID()
-    <EQUALS>
-    tag = Integer()
-    (
-    	<LBRACKET>
-    	optionD = OptionDescriptor(proto)
-    	{
-    		opts.put(optionD.getName(), optionD);
-    	}
-    	(
-    		<COMMA>
-	    	optionD = OptionDescriptor(proto)
-	    	{
-    			opts.put(optionD.getName(), optionD);
-    		}
-    	)*
-    	<RBRACKET>
-    )?    
-    {
-    	FieldDescriptor rc = new FieldDescriptor(proto);
-    	rc.setName(name);
-    	rc.setType(type);
-    	rc.setRule(rule);
-    	rc.setTag(tag);
-    	rc.setOptions(opts);
-    	return rc;
-    }
-}
-
 int Integer() :
 {
     Token t;
 }
 {
-  	t = <NUMBER>
+  	t = <INTEGER>
     {
     	return Integer.parseInt(t.image);
     }
@@ -429,6 +504,7 @@ String Rule() :
 
 String Value() :
 {
+    Token t;
     String value=null;
 }
 {
@@ -436,6 +512,16 @@ String Value() :
     	value = StringLitteral()
     	|
   		value = ID()
+  		|
+  		t = <INTEGER>
+  		{
+  			value = t.image;
+  		}
+  		|
+  		t = <FLOAT>
+  		{
+  			value = t.image;
+  		}
     )
     {
     	return value;
@@ -449,6 +535,7 @@ String ID() :
 {
     (
           t = <ID>
+        | t = <GROUP>
         | t = <IMPORT>
         | t = <PACKAGE>
         | t = <SERVICE>
@@ -458,12 +545,12 @@ String ID() :
         | t = <EXTENSIONS>
         | t = <EXTEND>
         | t = <ENUM>
-        | t = <GROUP>
         | t = <REQURIED>
         | t = <OPTIONAL>
         | t = <REPEATED>
         | t = <RETURNS>
         | t = <TO>
+        | t = <MAX>
     )
     {
     	return t.image;
@@ -476,21 +563,23 @@ String PackageID() :
     StringBuffer sb = new StringBuffer();
 }
 {
-    t = ID()
-    {
-    	sb.append(t);
-    }
-    (
-    	<PERIOD>
-    	t=ID()
-    	{
-    		sb.append(".");
-    		sb.append(t);
-    	}
-    )* 
-    {
-	    return sb.toString();
-    }    
+	(
+	    t = ID()
+	    {
+	    	sb.append(t);
+	    }
+	    (
+	    	<PERIOD>
+	    	t=ID()
+	    	{
+	    		sb.append(".");
+	    		sb.append(t);
+	    	}
+	    )*
+	)
+	{
+		return sb.toString();
+	}
 }
 
 

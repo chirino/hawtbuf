@@ -77,11 +77,12 @@ public class ProtoMojo extends AbstractMojo {
         List<File> recFiles = Arrays.asList(files);
         for (File file : recFiles) {
             try {
+                getLog().info("Compiling: "+file.getPath());
                 JavaGenerator generator = new JavaGenerator();
                 generator.setOutputDirectory(outputDirectory);
                 generator.compile(file);
             } catch (ParseException e) {
-                throw new MojoExecutionException("Parse failed: " + e.getMessage(), e);
+                throw new MojoExecutionException("Parse failed: "+file.getPath()+"\n"+ e.getMessage(), e);
             } catch (CompilerException e) {
                 throw new MojoExecutionException("Compile failed", e);
             } catch (IOException e) {

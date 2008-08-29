@@ -29,6 +29,7 @@ public class MessageDescriptor {
     private Map<String,EnumDescriptor> enums;
     private final ProtoDescriptor protoDescriptor;
     private List<ExtendDescriptor> extendsList;
+    private Map<String, OptionDescriptor> options;
 
     public MessageDescriptor(ProtoDescriptor protoDescriptor) {
         this.protoDescriptor = protoDescriptor;
@@ -88,6 +89,14 @@ public class MessageDescriptor {
     public void validate(List<String> errors) {
         // TODO Auto-generated method stub
         
+    }
+
+    public Map<String, OptionDescriptor> getOptions() {
+        return options;
+    }
+
+    public void setOptions(Map<String, OptionDescriptor> options) {
+        this.options = options;
     }
 
 }
