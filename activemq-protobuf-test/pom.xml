@@ -16,8 +16,8 @@
   limitations under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
     <groupId>org.apache.activemq.protobuf</groupId>
     <artifactId>activemq-protobuf-pom</artifactId>
@@ -25,41 +25,23 @@
   </parent>
 
   <groupId>org.apache.activemq.protobuf</groupId>
-  <artifactId>activemq-protobuf</artifactId>
+  <artifactId>activemq-protobuf-test</artifactId>
   <version>1.0-SNAPSHOT</version>
-  <packaging>maven-plugin</packaging>
   
-  <name>ActiveMQ Protocol Buffers Implementation and Compiler</name>
-
-  <description>
-    A Simpler Protocol Buffer Java API.  Includes a Proto to Java compiler.
-  </description>
+  <packaging>jar</packaging>
+  <name>ActiveMQ Protocol Buffers Tests</name>
 
   <dependencies>
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <version>2.0.1rc1</version>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-plugin-api</artifactId>
-      <version>2.0</version>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>maven-project</artifactId>
-      <version>2.0</version>
-      <optional>true</optional>
-    </dependency>
-    
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.4</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq.protobuf</groupId>
+      <artifactId>activemq-protobuf</artifactId>
+      <version>1.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
 
@@ -81,14 +63,13 @@
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>javacc-maven-plugin</artifactId>
-        <version>2.4.1</version>
+        <groupId>org.apache.activemq.protobuf</groupId>
+        <artifactId>activemq-protobuf</artifactId>
+        <version>1.0-SNAPSHOT</version>
          <executions>
           <execution>
-            <id>javacc</id>
             <goals>
-              <goal>javacc</goal>
+              <goal>compile</goal>
             </goals>
           </execution>
         </executions>
