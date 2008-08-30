@@ -79,14 +79,16 @@ public class ProtoMojo extends AbstractMojo {
             try {
                 getLog().info("Compiling: "+file.getPath());
                 JavaGenerator generator = new JavaGenerator();
-                generator.setOutputDirectory(outputDirectory);
+                generator.setOut(outputDirectory);
                 generator.compile(file);
-            } catch (ParseException e) {
-                throw new MojoExecutionException("Parse failed: "+file.getPath()+"\n"+ e.getMessage(), e);
             } catch (CompilerException e) {
-                throw new MojoExecutionException("Compile failed", e);
-            } catch (IOException e) {
-                throw new MojoExecutionException("IO Error occured: " + e.getMessage(), e);
+                getLog().error("Protocol Buffer Compiler failed with the following error(s):");
+                for (String error : e.getErrors() ) {
+                    getLog().error("");
+                    getLog().error(error);
+                }
+                getLog().error("");
+                throw new MojoExecutionException("Compile failed.  For more details see error messages listed above.", e);
             }
         }
 

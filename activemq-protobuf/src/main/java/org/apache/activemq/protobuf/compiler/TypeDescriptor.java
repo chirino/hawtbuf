@@ -16,41 +16,11 @@
  */
 package org.apache.activemq.protobuf.compiler;
 
-import java.util.List;
-import java.util.Map;
+public interface TypeDescriptor {
+    public String getName();
+    
+    public String getQName();
 
-public class ExtendDescriptor {
-
-    private String name;
-    private Map<String,FieldDescriptor> fields;
-    private final ProtoDescriptor protoDescriptor;
-
-    public ExtendDescriptor(ProtoDescriptor protoDescriptor) {
-        this.protoDescriptor = protoDescriptor;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setFields(Map<String,FieldDescriptor> fields) {
-        this.fields = fields;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Map<String,FieldDescriptor> getFields() {
-        return fields;
-    }
-
-    public ProtoDescriptor getProtoDescriptor() {
-        return protoDescriptor;
-    }
-
-    public void validate(List<String> errors) {
-    }
-
+    public ProtoDescriptor getProtoDescriptor();
 
 }

@@ -20,10 +20,10 @@ public class ExtensionsDescriptor {
 
     private int first;
     private int last;
-    private final ProtoDescriptor protoDescriptor;
+    private final MessageDescriptor parent;
 
-    public ExtensionsDescriptor(ProtoDescriptor protoDescriptor) {
-        this.protoDescriptor = protoDescriptor;
+    public ExtensionsDescriptor(MessageDescriptor parent) {
+        this.parent = parent;
     }
 
     public void setFirst(int first) {
@@ -42,8 +42,9 @@ public class ExtensionsDescriptor {
         return last;
     }
 
-    public ProtoDescriptor getProtoDescriptor() {
-        return protoDescriptor;
+    public MessageDescriptor getParent() {
+        return parent;
     }
+
 
 }

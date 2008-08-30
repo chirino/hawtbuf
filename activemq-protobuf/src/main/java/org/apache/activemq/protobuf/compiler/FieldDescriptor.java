@@ -83,16 +83,36 @@ public class FieldDescriptor {
     private String rule;
     private int tag;
     private Map<String,OptionDescriptor> options;
-    private final ProtoDescriptor protoDescriptor;
+    private TypeDescriptor typeDescriptor;
+    private final MessageDescriptor parent;
+    private MessageDescriptor group;
 
-    public FieldDescriptor(ProtoDescriptor protoDescriptor) {
-        this.protoDescriptor = protoDescriptor;
+    public FieldDescriptor(MessageDescriptor parent) {
+        this.parent = parent;
     }
     
-    public ProtoDescriptor getProtoDescriptor() {
-        return protoDescriptor;
+    public void validate(List<String> errors) {
+        if( group!=null ) {
+            typeDescriptor=group;
+        }
+        if( !SCALAR_TYPES.contains(type) ) {
+            // Find the type def for that guy..
+            if( typeDescriptor==null ) {
+                typeDescriptor = parent.getType(type);
+            }
+            if( typeDescriptor == null ) {
+                typeDescriptor = parent.getProtoDescriptor().getType(type);
+            }
+            if( typeDescriptor == null ) {
+                typeDescriptor = parent.getProtoDescriptor().getType(type);
+                errors.add("Field type not found: "+type);
+            }
+        }
     }
 
+    public boolean isGroup() {
+        return group!=null;
+    }
 
     public String getName() {
         return name;
@@ -165,6 +185,21 @@ public class FieldDescriptor {
 
     public boolean isStringType() {
         return type==STRING_TYPE;
+    }
+
+    public TypeDescriptor getTypeDescriptor() {
+        return typeDescriptor;
+    }
+
+    public void setTypeDescriptor(TypeDescriptor typeDescriptor) {
+        this.typeDescriptor = typeDescriptor;
+    }
+
+    public MessageDescriptor getGroup() {
+        return group;
+    }
+    public void setGroup(MessageDescriptor group) {
+        this.group = group;        
     }
 
 }

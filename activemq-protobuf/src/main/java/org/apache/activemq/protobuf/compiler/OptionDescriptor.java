@@ -22,10 +22,8 @@ public class OptionDescriptor {
 
     private String name;
     private String value;
-    private final ProtoDescriptor protoDescriptor;
 
-    public OptionDescriptor(ProtoDescriptor protoDescriptor) {
-        this.protoDescriptor = protoDescriptor;
+    public OptionDescriptor() {
     }
 
     public String getName() {
@@ -42,10 +40,6 @@ public class OptionDescriptor {
 
     public void setValue(String value) {
         this.value = value;
-    }
-
-    public ProtoDescriptor getProtoDescriptor() {
-        return protoDescriptor;
     }
 
     public void validate(List<String> errors) {

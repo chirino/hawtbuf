@@ -16,23 +16,39 @@
  */
 package org.apache.activemq.protobuf.compiler;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 
-public class MessageDescriptor {
+public class MessageDescriptor implements TypeDescriptor {
 
     private String name;
     private ExtensionsDescriptor extensions;
-    private Map<String,FieldDescriptor> fields;
-    private Map<String,MessageDescriptor> messages;
-    private Map<String,EnumDescriptor> enums;
+    private Map<String,FieldDescriptor> fields = new LinkedHashMap<String, FieldDescriptor>();
+    private Map<String,MessageDescriptor> messages = new LinkedHashMap<String,MessageDescriptor>();
+    private Map<String,EnumDescriptor> enums = new LinkedHashMap<String, EnumDescriptor>();
     private final ProtoDescriptor protoDescriptor;
-    private List<ExtendDescriptor> extendsList;
-    private Map<String, OptionDescriptor> options;
+    private List<MessageDescriptor> extendsList = new ArrayList<MessageDescriptor>();
+    private Map<String, OptionDescriptor> options = new LinkedHashMap<String, OptionDescriptor>();
+    private final MessageDescriptor parent;
 
-    public MessageDescriptor(ProtoDescriptor protoDescriptor) {
+    public MessageDescriptor(ProtoDescriptor protoDescriptor, MessageDescriptor parent) {
         this.protoDescriptor = protoDescriptor;
+        this.parent = parent;
+    }
+    
+    public void validate(List<String> errors) {
+        for (FieldDescriptor field : fields.values()) {
+            field.validate(errors);
+        }
+        for (EnumDescriptor o : enums.values()) {
+            o.validate(errors);
+        }
+        for (MessageDescriptor o : messages.values()) {
+            o.validate(errors);
+        }
     }
 
     public void setName(String name) {
@@ -43,10 +59,10 @@ public class MessageDescriptor {
         this.extensions = extensions;
     }
 
-    public void setExtends(List<ExtendDescriptor> extendsList) {
+    public void setExtends(List<MessageDescriptor> extendsList) {
         this.extendsList = extendsList;
     }
-    public List<ExtendDescriptor> getExtends() {
+    public List<MessageDescriptor> getExtends() {
         return extendsList;
     }
 
@@ -64,6 +80,14 @@ public class MessageDescriptor {
 
     public String getName() {
         return name;
+    }
+
+    public String getQName() {
+        if( parent==null ) {
+            return name;
+        } else {
+            return parent.getQName()+"."+name;
+        }
     }
 
     public ExtensionsDescriptor getExtensions() {
@@ -86,17 +110,33 @@ public class MessageDescriptor {
         return protoDescriptor;
     }
 
-    public void validate(List<String> errors) {
-        // TODO Auto-generated method stub
-        
-    }
-
     public Map<String, OptionDescriptor> getOptions() {
         return options;
     }
 
     public void setOptions(Map<String, OptionDescriptor> options) {
         this.options = options;
+    }
+
+    public MessageDescriptor getParent() {
+        return parent;
+    }
+
+    public TypeDescriptor getType(String t) {
+        for (MessageDescriptor o : messages.values()) {
+            if( t.equals(o.getName()) ) {
+                return o;
+            }
+            if( t.startsWith(o.getName()+".") ) {
+                return o.getType( t.substring(o.getName().length()+1) );
+            }
+        }
+        for (EnumDescriptor o : enums.values()) {
+            if( t.equals(o.getName()) ) {
+                return o;
+            }
+        }
+        return null;
     }
 
 }

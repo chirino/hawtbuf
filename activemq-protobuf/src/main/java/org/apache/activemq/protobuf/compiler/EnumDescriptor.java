@@ -16,17 +16,20 @@
  */
 package org.apache.activemq.protobuf.compiler;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class EnumDescriptor {
+public class EnumDescriptor implements TypeDescriptor {
 
     private String name;
-    private Map<String,EnumFieldDescriptor> fields;
+    private Map<String,EnumFieldDescriptor> fields= new LinkedHashMap<String, EnumFieldDescriptor>();
     private final ProtoDescriptor protoDescriptor;
+    private final MessageDescriptor parent;
 
-    public EnumDescriptor(ProtoDescriptor protoDescriptor) {
+    public EnumDescriptor(ProtoDescriptor protoDescriptor, MessageDescriptor parent) {
         this.protoDescriptor = protoDescriptor;
+        this.parent = parent;
     }
 
     public String getName() {
@@ -51,6 +54,18 @@ public class EnumDescriptor {
     public void validate(List<String> errors) {
         // TODO Auto-generated method stub
         
+    }
+
+    public MessageDescriptor getParent() {
+        return parent;
+    }
+
+    public String getQName() {
+        if( parent==null ) {
+            return name;
+        } else {
+            return parent.getQName()+"."+name;
+        }
     }
 
 

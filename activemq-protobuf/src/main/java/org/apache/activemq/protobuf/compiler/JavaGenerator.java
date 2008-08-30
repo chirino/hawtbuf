@@ -18,10 +18,12 @@ package org.apache.activemq.protobuf.compiler;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
@@ -29,25 +31,40 @@ import org.apache.activemq.protobuf.compiler.parser.ProtoParser;
 
 public class JavaGenerator {
 
-    private File outputDirectory = new File(".");
+    private File out = new File(".");
+    private File[] path = new File[]{new File(".")};
 
     private ProtoDescriptor proto;
     private String javaPackage;
     private String outerClassName;
     private File outputFile;
-    private FileOutputStream fos;
     private PrintWriter w;
     private int indent;
     private String optimizeFor;
+    private ArrayList<String> errors = new ArrayList<String>();
 
-    public static void main(String[] args) throws ParseException, CompilerException, IOException {
-
+    public static void main(String[] args) {
+        
         JavaGenerator generator = new JavaGenerator();
+        args = CommandLineSupport.setOptions(generator, args);
+        
         if (args.length == 0) {
             System.out.println("No proto files specified.");
         }
         for (int i = 0; i < args.length; i++) {
-            generator.compile(new File(args[i]));
+            try {
+                System.out.println("Compiling: "+args[i]);
+                generator.compile(new File(args[i]));
+            } catch (CompilerException e) {
+                System.out.println("Protocol Buffer Compiler failed with the following error(s):");
+                for (String error : e.getErrors() ) {
+                    System.out.println("");
+                    System.out.println(error);
+                }
+                System.out.println("");
+                System.out.println("Compile failed.  For more details see error messages listed above.");
+                return;
+            }
         }
 
     }
@@ -64,47 +81,95 @@ public class JavaGenerator {
         }
     }
 
-    public void compile(File file) throws ParseException, CompilerException, IOException {
+    public void compile(File file) throws CompilerException {
 
         // Parse the proto file
-        FileInputStream is = new FileInputStream(file);
+        FileInputStream is=null;
         try {
+            is = new FileInputStream(file);
             ProtoParser parser = new ProtoParser(is);
             proto = parser.ProtoDescriptor();
+            proto.setName(file.getName());
+            loadImports(proto, file.getParentFile());
+            proto.validate(errors);
+        } catch (FileNotFoundException e) {
+            errors.add("Failed to open: "+file.getPath()+":"+e.getMessage());
+        } catch (ParseException e) {
+            errors.add("Failed to parse: "+file.getPath()+":"+e.getMessage());
         } finally {
-            is.close();
+            try { is.close(); } catch (Throwable ignore){}
         }
 
-        // Check for errors in the proto definition
-        List<String> errors = new ArrayList<String>();
-        proto.validate(errors);
-        if (!errors.isEmpty()) {
+        // This would be too fatal to continue..
+        if (proto==null) {
             throw new CompilerException(errors);
         }
 
         // Load the options..
-        javaPackage = getOption(proto, "java_package", null);
-        outerClassName = getOption(proto, "java_outer_classname", uCamel(removeFileExtension(file.getName())));
+        javaPackage = javaPackage(proto);
+        outerClassName = javaClassName(proto);
         optimizeFor = getOption(proto, "optimize_for", "SPEED");
 
         // Figure out the java file name..
-        outputFile = outputDirectory;
+        outputFile = out;
         if (javaPackage != null) {
             String packagePath = javaPackage.replace('.', '/');
             outputFile = new File(outputFile, packagePath);
         }
         outputFile = new File(outputFile, outerClassName + ".java");
 
+        
+        if (!errors.isEmpty()) {
+            throw new CompilerException(errors);
+        }
         // Start writing the output file..
         outputFile.getParentFile().mkdirs();
-        fos = new FileOutputStream(outputFile);
+        
+        FileOutputStream fos=null;
         try {
+            fos = new FileOutputStream(outputFile);
             w = new PrintWriter(fos);
             generateProtoFile();
             w.flush();
+        } catch (FileNotFoundException e) {
+            errors.add("Failed to write to: "+outputFile.getPath()+":"+e.getMessage());
         } finally {
-            fos.close();
+            try { fos.close(); } catch (Throwable ignore){}
         }
+        if (!errors.isEmpty()) {
+            throw new CompilerException(errors);
+        }
+
+    }
+
+    private void loadImports(ProtoDescriptor proto, File protoDir) {
+        LinkedHashMap<String,ProtoDescriptor> children = new LinkedHashMap<String,ProtoDescriptor>(); 
+        for (String imp : proto.getImports()) {
+            File file = new File(protoDir, imp);
+            for (int i = 0; i < path.length && !file.exists(); i++) {
+                file = new File(path[i], imp);
+            } 
+            if ( !file.exists() ) {
+                errors.add("Cannot load import: "+imp);
+            }
+            
+            FileInputStream is=null;
+            try {
+                is = new FileInputStream(file);
+                ProtoParser parser = new ProtoParser(is);
+                ProtoDescriptor child = parser.ProtoDescriptor();
+                child.setName(file.getName());
+                loadImports(child, file.getParentFile());
+                children.put(imp, child);
+            } catch (ParseException e) {
+                errors.add("Failed to parse: "+file.getPath()+":"+e.getMessage());
+            } catch (FileNotFoundException e) {
+                errors.add("Failed to open: "+file.getPath()+":"+e.getMessage());
+            } finally {
+                try { is.close(); } catch (Throwable ignore){}
+            }
+        }
+        proto.setImportProtoDescriptors(children);
     }
 
 
@@ -118,6 +183,9 @@ public class JavaGenerator {
         p("public class " + outerClassName + " {");
         indent();
 
+        for (EnumDescriptor enumType : proto.getEnums().values()) {
+            generateEnum(enumType);
+        }
         for (MessageDescriptor m : proto.getMessages().values()) {
             generateMessageBean(m);
         }
@@ -142,17 +210,28 @@ public class JavaGenerator {
         p();
 
         indent();
-        for (MessageDescriptor subMessage : m.getMessages().values()) {
-            generateMessageBean(subMessage);
-        }
-
-        for (FieldDescriptor field : m.getFields().values()) {
-            generateFieldAccessor(field);
-        }
         
         for (EnumDescriptor enumType : m.getEnums().values()) {
             generateEnum(enumType);
         }
+
+        // Generate the Nested Messages.
+        for (MessageDescriptor subMessage : m.getMessages().values()) {
+            generateMessageBean(subMessage);
+        }
+
+        // Generate the Group Messages
+        for (FieldDescriptor field : m.getFields().values()) {
+            if( field.isGroup() ) {
+                generateMessageBean(field.getGroup());
+            }
+        }
+
+        // Generate the field accessors..
+        for (FieldDescriptor field : m.getFields().values()) {
+            generateFieldAccessor(className, field);
+        }
+        
 
         p("public final boolean isInitialized() {");
         indent();
@@ -181,7 +260,6 @@ public class JavaGenerator {
         p("}");
         p();
         
-        
         p("public void writeTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {");
         indent();
         for (FieldDescriptor field : m.getFields().values()) {
@@ -198,10 +276,11 @@ public class JavaGenerator {
         }
         // TODO: handle unknown fields
         // getUnknownFields().writeTo(output);
+        unindent();
         p("}");
         p();
         
-        p("public int getSerializedSize() {");
+        p("public int serializedSize() {");
         indent();
         p("if (memoizedSerializedSize != -1)");
         p("   return memoizedSerializedSize;");
@@ -242,6 +321,7 @@ public class JavaGenerator {
             unindent();
             p("}");
         }
+        p("return this;");
         unindent();
         p("}");
         p();
@@ -260,7 +340,7 @@ public class JavaGenerator {
               p("int tag = input.readTag();");
               p("switch (tag) {");
               p("case 0:");
-              p("   this.setUnknownFields(unknownFields.build());");
+//              p("   this.setUnknownFields(unknownFields.build());");
               p("   return this;");
               p("default: {");
               
@@ -297,8 +377,9 @@ public class JavaGenerator {
 
     /**
      * @param field
+     * @param className 
      */
-    private void generateFieldAccessor(FieldDescriptor field) {
+    private void generateFieldAccessor(String className, FieldDescriptor field) {
         String lname = lCamel(field.getName());
         String uname = uCamel(field.getName());
         String type = javaType(field);
@@ -332,12 +413,13 @@ public class JavaGenerator {
         p("}");
         p();
 
-        p("public void set" + uname + "(" + type + " " + lname + ") {");
+        p("public "+className+" set" + uname + "(" + type + " " + lname + ") {");
         indent();
         if (primitive) {
             p("this.b_" + lname + " = true;");
         }
-        p("this.f_" + lname + " = lname;");
+        p("this.f_" + lname + " = " + lname + ";");
+        p("return this;");
         unindent();
         p("}");
 
@@ -393,9 +475,17 @@ public class JavaGenerator {
         p();
         p("public static "+uname+" valueOf(int value) {");
         p("   switch (value) {");
+        
+        // It's possible to define multiple ENUM fields with the same value.. 
+        //   we only want to put the first one into the switch statement.
+        HashSet<Integer> values = new HashSet<Integer>();
         for (EnumFieldDescriptor field : ed.getFields().values()) {
-            p("   case "+field.getValue()+":");
-            p("      return "+field.getName()+";");
+            if( !values.contains(field.getValue()) ) {
+                p("   case "+field.getValue()+":");
+                p("      return "+field.getName()+";");
+                values.add(field.getValue());
+            }
+            
         }
         p("   default:");
         p("      return null;");
@@ -435,8 +525,48 @@ public class JavaGenerator {
         if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
             return "boolean";
         }
-        return field.getType();
+        
+        TypeDescriptor descriptor = field.getTypeDescriptor();
+        return javaType(descriptor);
     }
+
+    private String javaType(TypeDescriptor descriptor) {
+        ProtoDescriptor p = descriptor.getProtoDescriptor();
+        if( p != proto ) {
+            // Try to keep it short..
+            String othePackage = javaPackage(p);
+            if( equals(othePackage,javaPackage(proto) ) ) {
+                return javaClassName(p)+"."+descriptor.getQName();
+            }
+            // Use the fully qualified class name.
+            return othePackage+"."+javaClassName(p)+"."+descriptor.getQName();
+        }
+        return descriptor.getQName();
+    }
+    
+    private boolean equals(String o1, String o2) {
+        if( o1==o2 )
+            return true;
+        if( o1==null || o2==null )
+            return false;
+        return o1.equals(o2);
+    }
+
+    private String javaClassName(ProtoDescriptor proto) {
+        return getOption(proto, "java_outer_classname", uCamel(removeFileExtension(proto.getName())));
+    }
+
+
+    private String javaPackage(ProtoDescriptor proto) {
+        String name = proto.getPackageName();
+        if( name!=null ) {
+            name = name.replace('_', '.');
+            name = name.replace('-', '.');
+            name = name.replace('/', '.');
+        }
+        return getOption(proto, "java_package", name);
+    }
+
 
     // ----------------------------------------------------------------
     // Internal Helper methods
@@ -472,22 +602,47 @@ public class JavaGenerator {
     }
 
     static private String removeFileExtension(String name) {
-        return name;
+        return name.replaceAll("\\..*", "");
     }
 
     static private String uCamel(String name) {
-        return name;
+        boolean upNext=true;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if( Character.isJavaIdentifierPart(c) && Character.isLetterOrDigit(c)) {
+                if( upNext ) {
+                    c = Character.toUpperCase(c);
+                    upNext=false;
+                }
+                sb.append(c);
+            } else {
+                upNext=true;
+            }
+        }
+        return sb.toString();
     }
 
     static private String lCamel(String name) {
-        return name;
+        if( name == null || name.length()<1 )
+            return name;
+        return uCamel(name.substring(0,1).toLowerCase()+name.substring(1));
     }
 
-    public File getOutputDirectory() {
-        return outputDirectory;
+    public File getOut() {
+        return out;
     }
 
-    public void setOutputDirectory(File outputDirectory) {
-        this.outputDirectory = outputDirectory;
+    public void setOut(File outputDirectory) {
+        this.out = outputDirectory;
     }
+
+    public File[] getPath() {
+        return path;
+    }
+
+    public void setPath(File[] path) {
+        this.path = path;
+    }
+    
 }

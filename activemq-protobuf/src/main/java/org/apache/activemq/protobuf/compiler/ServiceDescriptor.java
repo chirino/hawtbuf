@@ -16,12 +16,13 @@
  */
 package org.apache.activemq.protobuf.compiler;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ServiceDescriptor {
 
     private final ProtoDescriptor protoDescriptor;
-    private List<MethodDescriptor> methods;
+    private List<MethodDescriptor> methods=new ArrayList<MethodDescriptor>();
     private String name;
 
     public ServiceDescriptor(ProtoDescriptor protoDescriptor) {

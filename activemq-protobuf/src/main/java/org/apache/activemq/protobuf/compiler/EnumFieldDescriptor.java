@@ -20,10 +20,10 @@ public class EnumFieldDescriptor {
 
     private String name;
     private int value;
-    private final ProtoDescriptor protoDescriptor;
+    private final EnumDescriptor parent;
 
-    public EnumFieldDescriptor(ProtoDescriptor protoDescriptor) {
-        this.protoDescriptor = protoDescriptor;
+    public EnumFieldDescriptor(EnumDescriptor parent) {
+        this.parent = parent;
     }
 
     public void setName(String name) {
@@ -42,13 +42,8 @@ public class EnumFieldDescriptor {
         return value;
     }
 
-    public ProtoDescriptor getProtoDescriptor() {
-        return protoDescriptor;
-    }
-
-    public String geName() {
-        // TODO Auto-generated method stub
-        return null;
+    public EnumDescriptor getParent() {
+        return parent;
     }
 
 }

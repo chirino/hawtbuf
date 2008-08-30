@@ -20,7 +20,7 @@
 //
 // A proto file which uses optimize_for = CODE_SIZE.
 
-import "google/protobuf/unittest.proto";
+import "unittest.proto";
 
 package protobuf_unittest;
 
