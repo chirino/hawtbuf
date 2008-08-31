@@ -14,15 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.protobuf.compiler;
+package org.apache.activemq.protobuf;
 
-public interface TypeDescriptor {
-    public String getName();
+public class WireInfo {
     
-    public String getQName();
+    public static final int WIRETYPE_VARINT = 0;
+    public static final int WIRETYPE_FIXED64 = 1;
+    public static final int WIRETYPE_LENGTH_DELIMITED = 2;
+    public static final int WIRETYPE_START_GROUP = 3;
+    public static final int WIRETYPE_END_GROUP = 4;
+    public static final int WIRETYPE_FIXED32 = 5;
+    
+    public static final int TAG_TYPE_BITS = 3;
 
-    public ProtoDescriptor getProtoDescriptor();
-
-    public boolean isEnum();
-
+    public static int makeTag(int fieldNumber, int wireType) {
+        return (fieldNumber << TAG_TYPE_BITS) | wireType;
+    }
 }

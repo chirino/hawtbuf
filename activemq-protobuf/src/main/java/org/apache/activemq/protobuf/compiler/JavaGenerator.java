@@ -16,10 +16,14 @@
  */
 package org.apache.activemq.protobuf.compiler;
 
+import com.google.protobuf.Message;
+import com.google.protobuf.WireFormat;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,6 +32,8 @@ import java.util.List;
 
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
 import org.apache.activemq.protobuf.compiler.parser.ProtoParser;
+
+import static org.apache.activemq.protobuf.WireInfo.*;
 
 public class JavaGenerator {
 
@@ -204,9 +210,7 @@ public class JavaGenerator {
         
         String className = uCamel(m.getName());
         p();
-        p("public static final class " + className + " {");
-        p();
-        p("private int memoizedSerializedSize = -1;");
+        p("public static final class " + className + " extends org.apache.activemq.protobuf.Message<" + className + "> {");
         p();
 
         indent();
@@ -232,54 +236,32 @@ public class JavaGenerator {
             generateFieldAccessor(className, field);
         }
         
+        generateMethodIsInitialized(m);
 
-        p("public final boolean isInitialized() {");
-        indent();
-        for (FieldDescriptor field : m.getFields().values()) {
-            String uname = uCamel(field.getName());
-            if( field.isRequired() ) {
-                p("if(  !has" + uname + "() ) {");
-                p("   return false;");
-                p("}");
-            }
-        }
-        p("return true;");
-        unindent();
-        p("}");
-        p();
+        generateMethodClear(m);
 
-        
-        p("public final void clear() {");
-        indent();
-        p("memoizedSerializedSize=-1;");
-        for (FieldDescriptor field : m.getFields().values()) {
-            String uname = uCamel(field.getName());
-            p("clear" + uname + "();");
-        }
-        unindent();
+        p("public "+className+" clone() {");
+        p("   return new "+className+"().mergeFrom(this);");
         p("}");
         p();
         
-        p("public void writeTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {");
-        indent();
-        for (FieldDescriptor field : m.getFields().values()) {
-            String uname = uCamel(field.getName());
-            p("if (has"+uname+"()) {");
-            indent();
-            if( field.isStringType() ) {
-                p("output.writeString("+field.getTag()+", get"+uname+"());");
-            } else if(field.isInteger32Type()) {
-            }
-            //TODO: finish this up.
-            unindent();
-            p("}");
-        }
-        // TODO: handle unknown fields
-        // getUnknownFields().writeTo(output);
+        generateMethodMergeFromBean(m, className);
+
+        generateMethodSerializedSize(m);
+        
+        generateMethodMergeFromStream(m, className);
+
+        generateMethodWriteTo(m);
+
         unindent();
         p("}");
         p();
-        
+    }
+    
+    /**
+     * @param m
+     */
+    private void generateMethodSerializedSize(MessageDescriptor m) {
         p("public int serializedSize() {");
         indent();
         p("if (memoizedSerializedSize != -1)");
@@ -287,16 +269,64 @@ public class JavaGenerator {
         p();
         p("int size = 0;");
         for (FieldDescriptor field : m.getFields().values()) {
+            
             String uname = uCamel(field.getName());
+            String getter="get"+uname+"()";            
+            String type = javaType(field);
             p("if (has"+uname+"()) {");
             indent();
-            if( field.isStringType() ) {
-                p("size += com.google.protobuf.CodedOutputStream.computeStringSize("+field.getTag()+", get"+uname+"());");;
-            } else if(field.isInteger32Type()) {
+            
+            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
+                p("for ("+type+" i : get"+uname+"List()) {");
+                indent();
+                getter = "i";
+            }
+
+            if( field.getType()==FieldDescriptor.STRING_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeStringSize("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.BYTES_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeBytesSize("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.BOOL_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeBoolSize("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.DOUBLE_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeDoubleSize("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.FLOAT_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeFloatSize("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.INT32_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeInt32Size("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.INT64_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeInt64Size("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.SINT32_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeSInt32Size("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.SINT64_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeSInt64Size("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.UINT32_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeUInt32Size("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.UINT64_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeUInt64Size("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.FIXED32_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeFixed32Size("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.FIXED64_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeFixed64Size("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.SFIXED32_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeSFixed32Size("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.SFIXED64_TYPE ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeSFixed64Size("+field.getTag()+", "+getter+");");
+            } else if( field.getTypeDescriptor().isEnum() ) {
+                p("size += com.google.protobuf.CodedOutputStream.computeEnumSize("+field.getTag()+", "+getter+".getNumber());");
+            } else if ( field.getGroup()!=null ) {
+                p("size += computeGroupSize("+field.getTag()+", "+getter+");");
+            } else {
+                p("size += computeMessageSize("+field.getTag()+", "+getter+");");
+            }
+            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
+                unindent();
+                p("}");
             }
             //TODO: finish this up.
             unindent();
             p("}");
+
         }
         // TODO: handle unknown fields
         // size += getUnknownFields().getSerializedSize();");
@@ -305,31 +335,86 @@ public class JavaGenerator {
         unindent();
         p("}");
         p();
-        
-        p("public "+className+" clone() {");
-        p("   return new "+className+"().mergeFrom(this);");
-        p("}");
-        p();
+    }
 
-        p("public "+className+" mergeFrom("+className+" other) {");
+    /**
+     * @param m
+     */
+    private void generateMethodWriteTo(MessageDescriptor m) {
+        p("public void writeTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {");
         indent();
         for (FieldDescriptor field : m.getFields().values()) {
             String uname = uCamel(field.getName());
+            String getter="get"+uname+"()";            
+            String type = javaType(field);
             p("if (has"+uname+"()) {");
             indent();
-            p("set"+uname+"(other.get"+uname+"());");
+            
+            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
+                p("for ("+type+" i : get"+uname+"List()) {");
+                indent();
+                getter = "i";
+            }
+
+            if( field.getType()==FieldDescriptor.STRING_TYPE ) {
+                p("output.writeString("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.BYTES_TYPE ) {
+                p("output.writeBytes("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.BOOL_TYPE ) {
+                p("output.writeBool("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.DOUBLE_TYPE ) {
+                p("output.writeDouble("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.FLOAT_TYPE ) {
+                p("output.writeFloat("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.INT32_TYPE ) {
+                p("output.writeInt32("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.INT64_TYPE ) {
+                p("output.writeInt64("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.SINT32_TYPE ) {
+                p("output.writeSInt32("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.SINT64_TYPE ) {
+                p("output.writeSInt64("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.UINT32_TYPE ) {
+                p("output.writeUInt32("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.UINT64_TYPE ) {
+                p("output.writeUInt64("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.FIXED32_TYPE ) {
+                p("output.writeFixed32("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.FIXED64_TYPE ) {
+                p("output.writeFixed64("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.SFIXED32_TYPE ) {
+                p("output.writeSFixed32("+field.getTag()+", "+getter+");");
+            } else if( field.getType()==FieldDescriptor.SFIXED64_TYPE ) {
+                p("output.writeSFixed64("+field.getTag()+", "+getter+");");
+            } else if( field.getTypeDescriptor().isEnum() ) {
+                p("output.writeEnum("+field.getTag()+", "+getter+".getNumber());");
+            } else if ( field.getGroup()!=null ) {
+                p("writeGroup(output, "+field.getTag()+", "+getter+");");
+            } else {
+                p("writeMessage(output, "+field.getTag()+", "+getter+");");
+            }
+            
+            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
+                unindent();
+                p("}");
+            }
+            
+            //TODO: finish this up.
             unindent();
             p("}");
         }
-        p("return this;");
+        // TODO: handle unknown fields
+        // getUnknownFields().writeTo(output);
         unindent();
         p("}");
-        p();
+        p();        
+    }
 
-        p("public "+className+" mergeFrom(com.google.protobuf.CodedInputStream input) throws java.io.IOException {");
-        p("    return mergeFrom(input, com.google.protobuf.ExtensionRegistry.getEmptyRegistry());");
-        p("}");
-
+    /**
+     * @param m
+     * @param className
+     */
+    private void generateMethodMergeFromStream(MessageDescriptor m, String className) {
         p("public "+className+" mergeFrom(com.google.protobuf.CodedInputStream input, com.google.protobuf.ExtensionRegistry extensionRegistry) throws java.io.IOException {");
         indent(); {
           //TODO: handle unknown fields
@@ -352,14 +437,132 @@ public class JavaGenerator {
               
               p("   break;");
               p("}");
+              
+              
               for (FieldDescriptor field : m.getFields().values()) {
                   String uname = uCamel(field.getName());
-                  p("case "+field.getTag()+":");
-                  indent();
-                  if( field.isStringType() ) {
-                      p("set"+uname+"(input.readString());");
+                  String setter = "set"+uname;
+                  boolean repeated = field.getRule() == FieldDescriptor.REPEATED_RULE;
+                  if( repeated ) {
+                      setter = "get"+uname+"List().add";
                   }
-                  //TODO: do the rest of the types...
+                  
+                  
+                  
+                  if( field.getType()==FieldDescriptor.STRING_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_LENGTH_DELIMITED)+":");
+                      indent();
+                      p(setter+"(input.readString());");
+                  } else if( field.getType()==FieldDescriptor.BYTES_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_LENGTH_DELIMITED)+":");
+                      indent();
+                      p(setter+"(input.readBytes());");
+                  } else if( field.getType()==FieldDescriptor.BOOL_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_VARINT)+":");
+                      indent();
+                      p(setter+"(input.readBool());");
+                  } else if( field.getType()==FieldDescriptor.DOUBLE_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_FIXED64)+":");
+                      indent();
+                      p(setter+"(input.readDouble());");
+                  } else if( field.getType()==FieldDescriptor.FLOAT_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_FIXED32)+":");
+                      indent();
+                      p(setter+"(input.readFloat());");
+                  } else if( field.getType()==FieldDescriptor.INT32_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_VARINT)+":");
+                      indent();
+                      p(setter+"(input.readInt32());");
+                  } else if( field.getType()==FieldDescriptor.INT64_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_VARINT)+":");
+                      indent();
+                      p(setter+"(input.readInt64());");
+                  } else if( field.getType()==FieldDescriptor.SINT32_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_VARINT)+":");
+                      indent();
+                      p(setter+"(input.readSInt32());");
+                  } else if( field.getType()==FieldDescriptor.SINT64_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_VARINT)+":");
+                      indent();
+                      p(setter+"(input.readSInt64());");
+                  } else if( field.getType()==FieldDescriptor.UINT32_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_VARINT)+":");
+                      indent();
+                      p(setter+"(input.readUInt32());");
+                  } else if( field.getType()==FieldDescriptor.UINT64_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_VARINT)+":");
+                      indent();
+                      p(setter+"(input.readUInt64());");
+                  } else if( field.getType()==FieldDescriptor.FIXED32_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_FIXED32)+":");
+                      indent();
+                      p(setter+"(input.readFixed32());");
+                  } else if( field.getType()==FieldDescriptor.FIXED64_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_FIXED64)+":");
+                      indent();
+                      p(setter+"(input.readFixed64());");
+                  } else if( field.getType()==FieldDescriptor.SFIXED32_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_FIXED32)+":");
+                      indent();
+                      p(setter+"(input.readSFixed32());");
+                  } else if( field.getType()==FieldDescriptor.SFIXED64_TYPE ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_FIXED64)+":");
+                      indent();
+                      p(setter+"(input.readSFixed64());");
+                  } else if( field.getTypeDescriptor().isEnum() ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_VARINT)+":");
+                      indent();
+                      String type = javaType(field);
+                      p("{");
+                      indent();
+                      p("int t = input.readEnum();");
+                      p(""+type+" value = "+type+".valueOf(t);");
+                      p("if( value !=null ) {");
+                      indent();
+                      p(setter+"(value);");
+                      unindent();
+                      p("}");
+                      // TODO: else store it as an known
+                      
+                      unindent();
+                      p("}");
+                      
+                  } else if ( field.getGroup()!=null ) {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_START_GROUP)+":");
+                      indent();
+                      String type = javaType(field);
+                      if( repeated ) {
+                          p(setter+"(readGroup(input, extensionRegistry, "+field.getTag()+", new "+type+"()));");
+                      } else {
+                          p("if (has"+uname+"()) {");
+                          indent();
+                          p("readGroup(input, extensionRegistry, "+field.getTag()+", get"+uname+"());");
+                          unindent();
+                          p("} else {");
+                          indent();
+                          p(setter+"(readGroup(input, extensionRegistry, "+field.getTag()+",new "+type+"()));");
+                          unindent();
+                          p("}");
+                      }
+                      p("");
+                  } else {
+                      p("case "+makeTag(field.getTag(), WIRETYPE_LENGTH_DELIMITED)+":");
+                      indent();
+                      String type = javaType(field);
+                      if( repeated ) {
+                          p(setter+"(readMessage(input, extensionRegistry, new "+type+"()));");
+                      } else {
+                          p("if (has"+uname+"()) {");
+                          indent();
+                          p("readMessage(input, extensionRegistry,get"+uname+"());");
+                          unindent();
+                          p("} else {");
+                          indent();
+                          p(setter+"(readMessage(input, extensionRegistry, new "+type+"()));");
+                          unindent();
+                          p("}");
+                      }
+                  }
                   p("break;");
                   unindent();
               }              
@@ -368,8 +571,88 @@ public class JavaGenerator {
           p("}"); 
         } unindent();
         p("}");
+    }
 
+    /**
+     * @param m
+     * @param className
+     */
+    private void generateMethodMergeFromBean(MessageDescriptor m, String className) {
+        p("public "+className+" mergeFrom("+className+" other) {");
+        indent();
+        for (FieldDescriptor field : m.getFields().values()) {
+            String uname = uCamel(field.getName());
+            p("if (other.has"+uname+"()) {");
+            indent();
 
+            if( field.isScalarType() || field.getTypeDescriptor().isEnum() ) {
+                if( field.isRepeated() ) {
+                    p("get"+uname+"List().addAll(other.get"+uname+"List());");
+                } else {
+                    p("set"+uname+"(other.get"+uname+"());");
+                }
+            } else {
+                
+                String type = javaType(field);
+                // It's complex type...
+                if( field.isRepeated() ) {
+                    p("for("+type+" element: other.get"+uname+"List() ) {");
+                    indent();
+                        p("get"+uname+"List().add(element.clone());");
+                    unindent();
+                    p("}");
+                } else {
+                    p("if (has"+uname+"()) {");
+                    indent();
+                    p("get"+uname+"().mergeFrom(other.get"+uname+"());");
+                    unindent();
+                    p("} else {");
+                    indent();
+                    p("set"+uname+"(other.get"+uname+"().clone());");
+                    unindent();
+                    p("}");
+                }
+            }
+            unindent();
+            p("}");
+        }
+        p("return this;");
+        unindent();
+        p("}");
+        p();
+    }
+
+    /**
+     * @param m
+     */
+    private void generateMethodClear(MessageDescriptor m) {
+        p("public final void clear() {");
+        indent();
+        p("memoizedSerializedSize=-1;");
+        for (FieldDescriptor field : m.getFields().values()) {
+            String uname = uCamel(field.getName());
+            p("clear" + uname + "();");
+        }
+        unindent();
+        p("}");
+        p();
+    }
+
+    /**
+     * @param m
+     */
+    private void generateMethodIsInitialized(MessageDescriptor m) {
+        p("public final boolean isInitialized() {");
+        indent();
+        for (FieldDescriptor field : m.getFields().values()) {
+            String uname = uCamel(field.getName());
+            if( field.isRequired() ) {
+                p("if(  !has" + uname + "() ) {");
+                p("   return false;");
+                p("}");
+            }
+        }
+        p("return true;");
         unindent();
         p("}");
         p();
@@ -380,57 +663,101 @@ public class JavaGenerator {
      * @param className 
      */
     private void generateFieldAccessor(String className, FieldDescriptor field) {
+        
         String lname = lCamel(field.getName());
         String uname = uCamel(field.getName());
-        String type = javaType(field);
+        String type = field.getRule()==FieldDescriptor.REPEATED_RULE ? javaCollectionType(field):javaType(field);
         String typeDefault = javaTypeDefault(field);
         boolean primitive = isPrimitive(field);
+        boolean repeated = field.getRule()==FieldDescriptor.REPEATED_RULE;
 
         // Create the fields..
         p("// " + field.getRule() + " " + field.getType() + " " + field.getName() + " = " + field.getTag() + ";");
-        p("private " + type + " f_" + lname + ";");
-        if (primitive) {
-            p("private boolean b_" + lname + ";");
-        }
-        p();
+        
+        if( repeated ) {
+            p("private java.util.List<" + type + "> f_" + lname + ";");
+            p();
+            
+            // Create the field accessors
+            p("public boolean has" + uname + "() {");
+            indent();
+            p("return this.f_" + lname + "!=null && !this.f_" + lname + ".isEmpty();");
+            unindent();
+            p("}");
+            p();
 
-        // Create the field accessors
-        p("public boolean has" + uname + "() {");
-        indent();
-        if (primitive) {
-            p("return this.b_" + lname + ";");
+            p("public java.util.List<" + type + "> get" + uname + "List() {");
+            indent();
+            p("if( this.f_" + lname + " == null ) {");
+            indent();
+            p("this.f_" + lname + " = new java.util.ArrayList<" + type + ">();");
+            unindent();
+            p("}");
+            p("return this.f_" + lname + ";");
+            unindent();
+            p("}");
+            p();
+
+            p("public "+className+" set" + uname + "List(java.util.List<" + type + "> " + lname + ") {");
+            indent();
+            p("this.f_" + lname + " = " + lname + ";");
+            p("return this;");
+            unindent();
+            p("}");
+
+            p("public void clear" + uname + "() {");
+            indent();
+            p("this.f_" + lname + " = null;");
+            unindent();
+            p("}");
+
         } else {
-            p("return this.f_" + lname + "!=null;");
-        }
-        unindent();
-        p("}");
-        p();
+            
+            p("private " + type + " f_" + lname + "= "+typeDefault+";");
+            if (primitive) {
+                p("private boolean b_" + lname + ";");
+            }
+            p();
+            
+            // Create the field accessors
+            p("public boolean has" + uname + "() {");
+            indent();
+            if (primitive) {
+                p("return this.b_" + lname + ";");
+            } else {
+                p("return this.f_" + lname + "!=null;");
+            }
+            unindent();
+            p("}");
+            p();
 
-        p("public " + type + " get" + uname + "() {");
-        indent();
-        p("return this.f_" + lname + ";");
-        unindent();
-        p("}");
-        p();
+            p("public " + type + " get" + uname + "() {");
+            indent();
+            p("return this.f_" + lname + ";");
+            unindent();
+            p("}");
+            p();
 
-        p("public "+className+" set" + uname + "(" + type + " " + lname + ") {");
-        indent();
-        if (primitive) {
-            p("this.b_" + lname + " = true;");
-        }
-        p("this.f_" + lname + " = " + lname + ";");
-        p("return this;");
-        unindent();
-        p("}");
+            p("public "+className+" set" + uname + "(" + type + " " + lname + ") {");
+            indent();
+            if (primitive) {
+                p("this.b_" + lname + " = true;");
+            }
+            p("this.f_" + lname + " = " + lname + ";");
+            p("return this;");
+            unindent();
+            p("}");
 
-        p("public void clear" + uname + "() {");
-        indent();
-        if (primitive) {
-            p("this.b_" + lname + " = false;");
+            p("public void clear" + uname + "() {");
+            indent();
+            if (primitive) {
+                p("this.b_" + lname + " = false;");
+            }
+            p("this.f_" + lname + " = " + typeDefault + ";");
+            unindent();
+            p("}");
         }
-        p("this.f_" + lname + " = " + typeDefault + ";");
-        unindent();
-        p("}");
+
     }
 
     private String javaTypeDefault(FieldDescriptor field) {
@@ -501,6 +828,33 @@ public class JavaGenerator {
 
     private boolean isPrimitive(FieldDescriptor field) {
         return field.isNumberType() || field.getType()==FieldDescriptor.BOOL_TYPE;
+    }
+    
+    private String javaCollectionType(FieldDescriptor field) {
+        if( field.isInteger32Type() ) {
+            return "java.lang.Integer";
+        }
+        if( field.isInteger64Type() ) {
+            return "java.lang.Long";
+        }
+        if( field.getType() == FieldDescriptor.DOUBLE_TYPE ) {
+            return "java.lang.Double";
+        }
+        if( field.getType() == FieldDescriptor.FLOAT_TYPE ) {
+            return "java.lang.Float";
+        }
+        if( field.getType() == FieldDescriptor.STRING_TYPE ) {
+            return "java.lang.String";
+        }
+        if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
+            return "com.google.protobuf.ByteString";
+        }
+        if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
+            return "java.lang.Boolean";
+        }
+        
+        TypeDescriptor descriptor = field.getTypeDescriptor();
+        return javaType(descriptor);
     }
 
     private String javaType(FieldDescriptor field) {

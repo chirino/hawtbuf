@@ -68,5 +68,9 @@ public class EnumDescriptor implements TypeDescriptor {
         }
     }
 
+    public boolean isEnum() {
+        return true;
+    }
+
 
 }

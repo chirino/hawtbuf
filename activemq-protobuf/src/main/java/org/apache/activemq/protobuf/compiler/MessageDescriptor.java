@@ -139,4 +139,8 @@ public class MessageDescriptor implements TypeDescriptor {
         return null;
     }
 
+    public boolean isEnum() {
+        return false;
+    }
+
 }
