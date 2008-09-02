@@ -588,6 +588,6 @@ String StringLitteral() :
 {
     t = <STRING> 
     {
-	    return ParserSupport.decodeString(t.image);
+	    return ParserSupport.decodeString(t);
     }    
 }

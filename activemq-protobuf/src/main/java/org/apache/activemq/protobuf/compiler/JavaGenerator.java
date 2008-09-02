@@ -16,14 +16,19 @@
  */
 package org.apache.activemq.protobuf.compiler;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.WireFormat;
+import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_FIXED32;
+import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_FIXED64;
+import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_LENGTH_DELIMITED;
+import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_START_GROUP;
+import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_VARINT;
+import static org.apache.activemq.protobuf.WireInfo.makeTag;
+
+import com.google.protobuf.ByteString;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,8 +38,6 @@ import java.util.List;
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
 import org.apache.activemq.protobuf.compiler.parser.ProtoParser;
 
-import static org.apache.activemq.protobuf.WireInfo.*;
-
 public class JavaGenerator {
 
     private File out = new File(".");
@@ -43,11 +46,11 @@ public class JavaGenerator {
     private ProtoDescriptor proto;
     private String javaPackage;
     private String outerClassName;
-    private File outputFile;
     private PrintWriter w;
     private int indent;
     private String optimizeFor;
     private ArrayList<String> errors = new ArrayList<String>();
+    private boolean multipleFiles;
 
     public static void main(String[] args) {
         
@@ -87,6 +90,10 @@ public class JavaGenerator {
         }
     }
 
+    interface Closure {
+        void execute() throws CompilerException;
+    }
+    
     public void compile(File file) throws CompilerException {
 
         // Parse the proto file
@@ -106,8 +113,7 @@ public class JavaGenerator {
             try { is.close(); } catch (Throwable ignore){}
         }
 
-        // This would be too fatal to continue..
-        if (proto==null) {
+        if (!errors.isEmpty()) {
             throw new CompilerException(errors);
         }
 
@@ -115,19 +121,34 @@ public class JavaGenerator {
         javaPackage = javaPackage(proto);
         outerClassName = javaClassName(proto);
         optimizeFor = getOption(proto, "optimize_for", "SPEED");
-
-        // Figure out the java file name..
-        outputFile = out;
-        if (javaPackage != null) {
-            String packagePath = javaPackage.replace('.', '/');
-            outputFile = new File(outputFile, packagePath);
+        multipleFiles = isMultipleFilesEnabled(proto);
+        
+        if( multipleFiles ) {
+            generateProtoFile();
+        } else {
+            writeFile(outerClassName, new Closure(){
+                public void execute() throws CompilerException {
+                    generateProtoFile();
+                }
+            });
         }
-        outputFile = new File(outputFile, outerClassName + ".java");
-
         
         if (!errors.isEmpty()) {
             throw new CompilerException(errors);
         }
+
+    }
+
+    private void writeFile(String className, Closure closure) throws CompilerException {
+        PrintWriter oldWriter = w;
+        // Figure out the java file name..
+        File outputFile = out;
+        if (javaPackage != null) {
+            String packagePath = javaPackage.replace('.', '/');
+            outputFile = new File(outputFile, packagePath);
+        }
+        outputFile = new File(outputFile, className + ".java");
+        
         // Start writing the output file..
         outputFile.getParentFile().mkdirs();
         
@@ -135,17 +156,14 @@ public class JavaGenerator {
         try {
             fos = new FileOutputStream(outputFile);
             w = new PrintWriter(fos);
-            generateProtoFile();
+            closure.execute();
             w.flush();
         } catch (FileNotFoundException e) {
             errors.add("Failed to write to: "+outputFile.getPath()+":"+e.getMessage());
         } finally {
             try { fos.close(); } catch (Throwable ignore){}
+            w = oldWriter;
         }
-        if (!errors.isEmpty()) {
-            throw new CompilerException(errors);
-        }
-
     }
 
     private void loadImports(ProtoDescriptor proto, File protoDir) {
@@ -179,38 +197,69 @@ public class JavaGenerator {
     }
 
 
-    private void generateProtoFile() {
-        generateFileHeader();
-        if (javaPackage != null) {
-            p("package " + javaPackage + ";");
-            p("");
-        }
+    private void generateProtoFile() throws CompilerException {
+        if( multipleFiles ) {
+            for (EnumDescriptor value : proto.getEnums().values()) {
+                final EnumDescriptor o = value;
+                String className = uCamel(o.getName());
+                writeFile(className, new Closure(){
+                    public void execute() throws CompilerException {
+                        generateFileHeader();
+                        generateEnum(o);
+                    }
+                });
+            }
+            for (MessageDescriptor value : proto.getMessages().values()) {
+                final MessageDescriptor o = value;
+                String className = uCamel(o.getName());
+                writeFile(className, new Closure(){
+                    public void execute() throws CompilerException {
+                        generateFileHeader();
+                        generateMessageBean(o);
+                    }
+                });
+            }
 
-        p("public class " + outerClassName + " {");
-        indent();
+        } else {
+            generateFileHeader();
 
-        for (EnumDescriptor enumType : proto.getEnums().values()) {
-            generateEnum(enumType);
-        }
-        for (MessageDescriptor m : proto.getMessages().values()) {
-            generateMessageBean(m);
-        }
+            p("public class " + outerClassName + " {");
+            indent();
 
-        unindent();
-        p("}");
+            for (EnumDescriptor enumType : proto.getEnums().values()) {
+                generateEnum(enumType);
+            }
+            for (MessageDescriptor m : proto.getMessages().values()) {
+                generateMessageBean(m);
+            }
+
+            unindent();
+            p("}");
+        }
     }
 
     private void generateFileHeader() {
         p("//");
         p("// Generated by protoc, do not edit by hand.");
         p("//");
+        if (javaPackage != null) {
+            p("package " + javaPackage + ";");
+            p("");
+        }
     }
 
     private void generateMessageBean(MessageDescriptor m) {
         
         String className = uCamel(m.getName());
         p();
-        p("public static final class " + className + " extends org.apache.activemq.protobuf.Message<" + className + "> {");
+        
+        String staticOption = "static ";
+        if( multipleFiles && m.getParent()==null ) {
+            staticOption="";
+        }
+        
+        
+        p("public "+staticOption+"final class " + className + " extends org.apache.activemq.protobuf.Message<" + className + "> {");
         p();
 
         indent();
@@ -236,7 +285,7 @@ public class JavaGenerator {
             generateFieldAccessor(className, field);
         }
         
-        generateMethodIsInitialized(m);
+        generateMethodAssertInitialized(m, className);
 
         generateMethodClear(m);
 
@@ -253,11 +302,59 @@ public class JavaGenerator {
 
         generateMethodWriteTo(m);
 
+        generateMethodParseFrom(m, className);
+
+        generateMethodToString(m);
+                
         unindent();
         p("}");
         p();
     }
     
+    private void generateMethodParseFrom(MessageDescriptor m, String className) {
+        p("public static "+className+" parseFrom(com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("return new "+className+"().mergeFrom(data).checktInitialized();");
+        unindent();
+        p("}");
+        p();
+
+        p("public static "+className+" parseFrom(com.google.protobuf.ByteString data, com.google.protobuf.ExtensionRegistry extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("return new "+className+"().mergeFrom(data, extensionRegistry).checktInitialized();");
+        unindent();
+        p("}");
+        p();
+
+        p("public static "+className+" parseFrom(byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("return new "+className+"().mergeFrom(data).checktInitialized();");
+        unindent();
+        p("}");
+        p();
+
+        p("public static "+className+" parseFrom(byte[] data, com.google.protobuf.ExtensionRegistry extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("return new "+className+"().mergeFrom(data,extensionRegistry).checktInitialized();");
+        unindent();
+        p("}");
+        p();
+        
+        p("public static "+className+" parseFrom(java.io.InputStream data) throws com.google.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        indent();
+        p("return new "+className+"().mergeFrom(data).checktInitialized();");
+        unindent();
+        p("}");
+        p();
+
+        p("public static "+className+" parseFrom(java.io.InputStream data, com.google.protobuf.ExtensionRegistry extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        indent();
+        p("return new "+className+"().mergeFrom(data,extensionRegistry).checktInitialized();");
+        unindent();
+        p("}");
+        p();        
+    }
+
     /**
      * @param m
      */
@@ -423,7 +520,13 @@ public class JavaGenerator {
           p("while (true) {");
           indent(); {
               p("int tag = input.readTag();");
+              // Is it an end group tag?
+              p("if ((tag & 0x07) == 4) {");
+              p("   return this;");
+              p("}");
+              
               p("switch (tag) {");
+              // The end of stream..
               p("case 0:");
 //              p("   this.setUnknownFields(unknownFields.build());");
               p("   return this;");
@@ -638,24 +741,153 @@ public class JavaGenerator {
         p();
     }
 
-    /**
-     * @param m
-     */
-    private void generateMethodIsInitialized(MessageDescriptor m) {
+    private void generateMethodAssertInitialized(MessageDescriptor m, String className) {
+        
+        
+        
         p("public final boolean isInitialized() {");
         indent();
+        p("return missingFields().isEmpty();");
+        unindent();
+        p("}");
+        p();
+        
+        p("public final "+className+" assertInitialized() throws org.apache.activemq.protobuf.UninitializedMessageException {");
+        indent();
+        p("java.util.ArrayList<String> missingFields = missingFields();");
+        p("if( !missingFields.isEmpty()) {");
+        indent();
+        p("throw new org.apache.activemq.protobuf.UninitializedMessageException(missingFields);");
+        unindent();
+        p("}");
+        p("return this;");
+        unindent();
+        p("}");
+        p();
+        
+        p("private final "+className+" checktInitialized() throws com.google.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("java.util.ArrayList<String> missingFields = missingFields();");
+        p("if( !missingFields.isEmpty()) {");
+        indent();
+        p("throw new org.apache.activemq.protobuf.UninitializedMessageException(missingFields).asInvalidProtocolBufferException();");
+        unindent();
+        p("}");
+        p("return this;");
+        unindent();
+        p("}");
+        p();
+
+        p("public final java.util.ArrayList<String> missingFields() {");
+        indent();
+        p("java.util.ArrayList<String> missingFields = new java.util.ArrayList<String>();");
+        
         for (FieldDescriptor field : m.getFields().values()) {
             String uname = uCamel(field.getName());
             if( field.isRequired() ) {
                 p("if(  !has" + uname + "() ) {");
-                p("   return false;");
+                indent();
+                p("missingFields.add(\""+field.getName()+"\");");
+                unindent();
                 p("}");
             }
         }
-        p("return true;");
+        
+        for (FieldDescriptor field : m.getFields().values()) {
+            if( field.getTypeDescriptor()!=null && !field.getTypeDescriptor().isEnum()) {
+                String uname = uCamel(field.getName());
+                p("if( has" + uname + "() ) {");
+                indent();
+                if( !field.isRepeated() ) {
+                    p("try {");
+                    indent();
+                    p("get" + uname + "().assertInitialized();");
+                    unindent();
+                    p("} catch (org.apache.activemq.protobuf.UninitializedMessageException e){");
+                    indent();
+                    p("missingFields.addAll(prefix(e.getMissingFields(),\""+field.getName()+".\"));");
+                    unindent();
+                    p("}");
+                } else {
+                    String type = javaCollectionType(field);
+                    p("java.util.List<"+type+"> l = get" + uname + "List();");
+                    p("for( int i=0; i < l.size(); i++ ) {");
+                    indent();
+                    p("try {");
+                    indent();
+                    p("l.get(i).assertInitialized();");
+                    unindent();
+                    p("} catch (org.apache.activemq.protobuf.UninitializedMessageException e){");
+                    indent();
+                    p("missingFields.addAll(prefix(e.getMissingFields(),\""+field.getName()+"[\"+i+\"]\"));");
+                    unindent();
+                    p("}");
+                    unindent();
+                    p("}");
+                }
+                unindent();
+                p("}");
+            }
+        }
+        p("return missingFields;");
         unindent();
         p("}");
         p();
+    }
+
+    private void generateMethodToString(MessageDescriptor m) {
+        
+        p("public String toString() {");
+        indent();
+        p("return toString(new java.lang.StringBuilder(), \"\").toString();");
+        unindent();
+        p("}");
+        p();
+
+        p("public java.lang.StringBuilder toString(java.lang.StringBuilder sb, String prefix) {");
+        indent();
+        
+        for (FieldDescriptor field : m.getFields().values()) {
+            String uname = uCamel(field.getName());
+            p("if(  has" + uname + "() ) {");
+            indent();
+            if( field.isRepeated() ) {
+                String type = javaCollectionType(field);
+                p("java.util.List<"+type+"> l = get" + uname + "List();");
+                p("for( int i=0; i < l.size(); i++ ) {");
+                indent();
+                if( field.getTypeDescriptor()!=null && !field.getTypeDescriptor().isEnum()) {
+                    p("sb.append(prefix+\""+field.getName()+"[\"+i+\"] {\\n\");");
+                    p("l.get(i).toString(sb, prefix+\"  \");");
+                    p("sb.append(\"}\\n\");");
+                } else {
+                    p("sb.append(prefix+\""+field.getName()+"[\"+i+\"]: \");");
+                    p("sb.append(l.get(i));");
+                    p("sb.append(\"\\n\");");
+                }
+                unindent();
+                p("}");
+            } else {
+                if( field.getTypeDescriptor()!=null && !field.getTypeDescriptor().isEnum()) {
+                    p("sb.append(prefix+\""+field.getName()+" {\\n\");");
+                    p("get" + uname + "().toString(sb, prefix+\"  \");");
+                    p("sb.append(\"}\\n\");");
+                } else {
+                    p("sb.append(prefix+\""+field.getName()+": \");");
+                    p("sb.append(get" + uname + "());");
+                    p("sb.append(\"\\n\");");
+                }
+            }
+            unindent();
+            p("}");
+        }
+
+        
+        p("return sb;");
+        unindent();
+        p("}");
+        p();
+
     }
 
     /**
@@ -668,7 +900,7 @@ public class JavaGenerator {
         String uname = uCamel(field.getName());
         String type = field.getRule()==FieldDescriptor.REPEATED_RULE ? javaCollectionType(field):javaType(field);
         String typeDefault = javaTypeDefault(field);
-        boolean primitive = isPrimitive(field);
+        boolean primitive = field.getTypeDescriptor()==null || field.getTypeDescriptor().isEnum();
         boolean repeated = field.getRule()==FieldDescriptor.REPEATED_RULE;
 
         // Create the fields..
@@ -704,16 +936,66 @@ public class JavaGenerator {
             p("return this;");
             unindent();
             p("}");
+            p();
+            
+            p("public int get" + uname + "Count() {");
+            indent();
+            p("if( this.f_" + lname + " == null ) {");
+            indent();
+            p("return 0;");
+            unindent();
+            p("}");
+            p("return this.f_" + lname + ".size();");
+            unindent();
+            p("}");
+            p();
+            
+            p("public " + type + " get" + uname + "(int index) {");
+            indent();
+            p("if( this.f_" + lname + " == null ) {");
+            indent();
+            p("return null;");
+            unindent();
+            p("}");
+            p("return this.f_" + lname + ".get(index);");
+            unindent();
+            p("}");
+            p();
+                            
+            p("public "+className+" set" + uname + "(int index, " + type + " value) {");
+            indent();
+            p("get" + uname + "List().set(index, value);");
+            p("return this;");
+            unindent();
+            p("}");
+            p();
+            
+            p("public "+className+" add" + uname + "(" + type + " value) {");
+            indent();
+            p("get" + uname + "List().add(value);");
+            p("return this;");
+            unindent();
+            p("}");
+            p();
+            
+            p("public "+className+" addAll" + uname + "(java.lang.Iterable<? extends " + type + "> collection) {");
+            indent();
+            p("super.addAll(collection, get" + uname + "List());");
+            p("return this;");
+            unindent();
+            p("}");
+            p();
 
             p("public void clear" + uname + "() {");
             indent();
             p("this.f_" + lname + " = null;");
             unindent();
             p("}");
+            p();
 
         } else {
             
-            p("private " + type + " f_" + lname + "= "+typeDefault+";");
+            p("private " + type + " f_" + lname + " = "+typeDefault+";");
             if (primitive) {
                 p("private boolean b_" + lname + ";");
             }
@@ -733,6 +1015,13 @@ public class JavaGenerator {
 
             p("public " + type + " get" + uname + "() {");
             indent();
+            if( field.getTypeDescriptor()!=null && !field.getTypeDescriptor().isEnum()) {
+                p("if( this.f_" + lname + " == null ) {");
+                indent();
+                p("this.f_" + lname + " = new " + type + "();");
+                unindent();
+                p("}");
+            }
             p("return this.f_" + lname + ";");
             unindent();
             p("}");
@@ -747,6 +1036,7 @@ public class JavaGenerator {
             p("return this;");
             unindent();
             p("}");
+            p();
 
             p("public void clear" + uname + "() {");
             indent();
@@ -756,27 +1046,105 @@ public class JavaGenerator {
             p("this.f_" + lname + " = " + typeDefault + ";");
             unindent();
             p("}");
+            p();
         }
 
     }
 
     private String javaTypeDefault(FieldDescriptor field) {
-//        OptionDescriptor defaultOption = field.getOptions().get("default");
-        if( field.isNumberType() ) {
-            return "0";
+        OptionDescriptor defaultOption = field.getOptions().get("default");
+        if( defaultOption!=null ) {
+            if( field.isStringType() ) {
+                return asJavaString(defaultOption.getValue());
+            } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
+                return "com.google.protobuf.ByteString.copyFromUtf8("+asJavaString(defaultOption.getValue())+")";
+            } else if( field.isInteger32Type() ) {
+                int v;
+                if( field.getType() == FieldDescriptor.UINT32_TYPE ) {
+                    v = TextFormat.parseUInt32(defaultOption.getValue());
+                } else {
+                    v = TextFormat.parseInt32(defaultOption.getValue());
+                }
+                return ""+v;
+            } else if( field.isInteger64Type() ) {
+                long v;
+                if( field.getType() == FieldDescriptor.UINT64_TYPE ) {
+                    v = TextFormat.parseUInt64(defaultOption.getValue());
+                } else {
+                    v = TextFormat.parseInt64(defaultOption.getValue());
+                }
+                return ""+v+"l";
+            } else if( field.getType() == FieldDescriptor.DOUBLE_TYPE ) {
+                double v = Double.valueOf(defaultOption.getValue());
+                return ""+v+"d";
+            } else if( field.getType() == FieldDescriptor.FLOAT_TYPE ) {
+                float v = Float.valueOf(defaultOption.getValue());
+                return ""+v+"f";
+            } else if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
+                boolean v = Boolean.valueOf(defaultOption.getValue());
+                return ""+v;
+            } else if( field.getTypeDescriptor()!=null && field.getTypeDescriptor().isEnum() ) {
+                return javaType(field)+"."+defaultOption.getValue();
+            }
+            return defaultOption.getValue();
+        } else {
+            if( field.isNumberType() ) {
+                return "0";
+            }
+            if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
+                return "false";
+            }
+            return "null";
         }
-        if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
-            return "false";
-        }
-        return "null";
     }
+        
+    static final char HEX_TABLE[] = new char[]{ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
     
+    private String asJavaString(String value) {
+        StringBuilder sb = new StringBuilder(value.length()+2);
+        sb.append("\"");
+        for (int i = 0; i < value.length(); i++) {
+            
+          char b = value.charAt(i);
+          switch (b) {
+            // Java does not recognize \a or \v, apparently.
+            case '\b': sb.append("\\b" ); break;
+            case '\f': sb.append("\\f" ); break;
+            case '\n': sb.append("\\n" ); break;
+            case '\r': sb.append("\\r" ); break;
+            case '\t': sb.append("\\t" ); break;
+            case '\\': sb.append("\\\\"); break;
+            case '\'': sb.append("\\\'"); break;
+            case '"' : sb.append("\\\""); break;
+            default:
+              if (b >= 0x20 && b <'Z') {
+                sb.append((char) b);
+              } else {
+                sb.append("\\u");
+                sb.append(HEX_TABLE[(b >>> 12) & 0x0F] );
+                sb.append(HEX_TABLE[(b >>> 8) & 0x0F] );
+                sb.append(HEX_TABLE[(b >>> 4) & 0x0F] );
+                sb.append(HEX_TABLE[b & 0x0F] );
+              }
+              break;
+          }
+          
+        }
+        sb.append("\"");
+        return sb.toString();
+    }
+
     private void generateEnum(EnumDescriptor ed) {
         String uname = uCamel(ed.getName());
 
+        String staticOption = "static ";
+        if( multipleFiles && ed.getParent()==null ) {
+            staticOption="";
+        }
+
         // TODO Auto-generated method stub
         p();
-        p("public static enum " +uname + " {");
+        p("public "+staticOption+"enum " +uname + " {");
         indent();
         
         
@@ -784,20 +1152,24 @@ public class JavaGenerator {
         int counter=0;
         for (EnumFieldDescriptor field : ed.getFields().values()) {
             boolean last = counter+1 == ed.getFields().size();
-            p(field.getName()+"("+counter+", "+field.getValue()+")"+(last?";":",")); 
+            p(field.getName()+"(\""+field.getName()+"\", "+field.getValue()+")"+(last?";":",")); 
             counter++;
         }
         p();
-        p("private final int index;");
+        p("private final String name;");
         p("private final int value;");
         p();
-        p("private "+uname+"(int index, int value) {");
-        p("   this.index = index;");
+        p("private "+uname+"(String name, int value) {");
+        p("   this.name = name;");
         p("   this.value = value;");
         p("}");
         p();
         p("public final int getNumber() {");
         p("   return value;");
+        p("}");
+        p();
+        p("public final String toString() {");
+        p("   return name;");
         p("}");
         p();
         p("public static "+uname+" valueOf(int value) {");
@@ -825,10 +1197,6 @@ public class JavaGenerator {
         p();
     }
 
-
-    private boolean isPrimitive(FieldDescriptor field) {
-        return field.isNumberType() || field.getType()==FieldDescriptor.BOOL_TYPE;
-    }
     
     private String javaCollectionType(FieldDescriptor field) {
         if( field.isInteger32Type() ) {
@@ -909,12 +1277,15 @@ public class JavaGenerator {
     private String javaClassName(ProtoDescriptor proto) {
         return getOption(proto, "java_outer_classname", uCamel(removeFileExtension(proto.getName())));
     }
+    
+    private boolean isMultipleFilesEnabled(ProtoDescriptor proto) {
+        return "true".equals(getOption(proto, "java_multiple_files", "false"));
+    }
 
 
     private String javaPackage(ProtoDescriptor proto) {
         String name = proto.getPackageName();
         if( name!=null ) {
-            name = name.replace('_', '.');
             name = name.replace('-', '.');
             name = name.replace('/', '.');
         }
@@ -980,7 +1351,8 @@ public class JavaGenerator {
     static private String lCamel(String name) {
         if( name == null || name.length()<1 )
             return name;
-        return uCamel(name.substring(0,1).toLowerCase()+name.substring(1));
+        String uCamel = uCamel(name);
+        return uCamel.substring(0,1).toLowerCase()+uCamel.substring(1);
     }
 
     public File getOut() {

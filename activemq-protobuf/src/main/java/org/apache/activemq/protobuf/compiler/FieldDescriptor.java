@@ -51,6 +51,9 @@ public class FieldDescriptor {
     public static final Set<String> NUMBER_TYPES = new HashSet<String>();
     public static final Set<String> SCALAR_TYPES = new HashSet<String>();
     
+    public static final Set<String> SIGNED_TYPES = new HashSet<String>();
+    public static final Set<String> UNSIGNED_TYPES = new HashSet<String>();
+    
     static {
         INT32_TYPES.add(INT32_TYPE);
         INT32_TYPES.add(UINT32_TYPE);
