@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.StringTokenizer;
 
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
 import org.apache.activemq.protobuf.compiler.parser.ProtoParser;
@@ -258,8 +259,14 @@ public class JavaGenerator {
             staticOption="";
         }
         
+        String javaImplements = getOption(m, "java_implments", null);
         
-        p("public "+staticOption+"final class " + className + " extends org.apache.activemq.protobuf.Message<" + className + "> {");
+        String implementsExpression = "";
+        if( javaImplements!=null ) {
+            implementsExpression = "implements "+javaImplements+" ";
+        }
+        
+        p("public "+staticOption+"final class " + className + " extends org.apache.activemq.protobuf.BaseMessage<" + className + "> "+implementsExpression+"{");
         p();
 
         indent();
@@ -305,11 +312,98 @@ public class JavaGenerator {
         generateMethodParseFrom(m, className);
 
         generateMethodToString(m);
+        
+        generateMethodVisitor(m);
                 
+        generateMethodType(m, className);
+        
         unindent();
         p("}");
         p();
     }
+
+    /**
+     * If the java_visitor message option is set, then this method generates a visitor method.  The option 
+     * speifiies the class name of the visitor and optionally the return value and exceptions thrown by the visitor.
+     * 
+     * Examples:
+     * 
+     *   option java_visitor = "org.apache.kahadb.store.Visitor";
+     *   generates:
+     *     public void visit(org.apache.kahadb.store.Visitor visitor) {
+     *       visitor.visit(this);
+     *     }
+     *   
+     *   option java_visitor = "org.apache.kahadb.store.Visitor:int:java.io.IOException";
+     *   generates:
+     *     public int visit(org.apache.kahadb.store.Visitor visitor) throws java.io.IOException {
+     *       return visitor.visit(this);
+     *     }
+     * 
+     * @param m
+     */
+    private void generateMethodVisitor(MessageDescriptor m) {
+        String javaVisitor = getOption(m, "java_visitor", null);        
+        if( javaVisitor!=null ) {
+            String returns = "void";
+            String throwsException = null;
+            
+            StringTokenizer st = new StringTokenizer(javaVisitor, ":");
+            String vistorClass = st.nextToken();
+            if( st.hasMoreTokens() ) {
+                returns = st.nextToken();
+            }
+            if( st.hasMoreTokens() ) {
+                throwsException = st.nextToken();
+            }
+            
+            String throwsClause = "";
+            if( throwsException!=null ) {
+                throwsClause = "throws "+throwsException+" ";
+            }
+            
+            p("public "+returns+" visit("+vistorClass+" visitor) "+throwsClause+ "{");
+            indent();
+            if( "void".equals(returns) ) {
+                p("visitor.visit(this);");
+            } else {
+                p("return visitor.visit(this);");
+            }
+            unindent();
+            p("}");
+            p();
+        }
+    }
+    
+    private void generateMethodType(MessageDescriptor m, String className) {
+        String typeEnum = getOption(m, "java_type_method", null);        
+        if( typeEnum!=null ) {
+            
+            TypeDescriptor typeDescriptor = m.getType(typeEnum);
+            if( typeDescriptor == null ) {
+                typeDescriptor = m.getProtoDescriptor().getType(typeEnum);
+            }
+            if( typeDescriptor == null || !typeDescriptor.isEnum() ) {
+                errors.add("The java_type_method option on the "+m.getName()+" message does not point to valid enum type");
+                return;
+            }
+            
+            EnumDescriptor enumDescriptor = (EnumDescriptor)typeDescriptor;
+            if( enumDescriptor.getFields().get(className) == null ) {
+                errors.add("The java_type_method option on the "+m.getName()+" message does not points to the "+typeEnum+" enum but it does not have an entry for "+className);
+            }
+            
+            String type = javaType(typeDescriptor);
+            
+            p("public "+type+" type() {");
+            indent();
+                p("return "+type+"."+className+";");
+            unindent();
+            p("}");
+            p();
+        }
+    }
+    
     
     private void generateMethodParseFrom(MessageDescriptor m, String className) {
         p("public static "+className+" parseFrom(com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {");
@@ -1325,7 +1419,15 @@ public class JavaGenerator {
         }
         return optionDescriptor.getValue();
     }
-
+    
+    private String getOption(MessageDescriptor md, String optionName, String defaultValue) {
+        OptionDescriptor optionDescriptor = md.getOptions().get(optionName);
+        if (optionDescriptor == null) {
+            return defaultValue;
+        }
+        return optionDescriptor.getValue();
+    }
+    
     static private String removeFileExtension(String name) {
         return name.replaceAll("\\..*", "");
     }

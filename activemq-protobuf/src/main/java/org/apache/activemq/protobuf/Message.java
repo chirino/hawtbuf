@@ -32,166 +32,38 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-abstract public class Message<T> {
+public interface Message<T> {
 
-    protected int memoizedSerializedSize = -1;
+    public T mergeFrom(T other);
 
-    static protected <T> void addAll(Iterable<T> values, Collection<? super T> list) {
-        if (values instanceof Collection) {
-            @SuppressWarnings("unsafe")
-            Collection<T> collection = (Collection<T>)values;
-            list.addAll(collection);
-        } else {
-            for (T value : values) {
-                list.add(value);
-            }
-        }
-    }
+    public T mergeFrom(CodedInputStream input) throws IOException;
 
-    static protected void writeGroup(CodedOutputStream output, int tag, Message message) throws IOException {
-        output.writeTag(tag, WIRETYPE_START_GROUP);
-        message.writeTo(output);
-        output.writeTag(tag, WIRETYPE_END_GROUP);
-    }
+    public T mergeFrom(CodedInputStream input, ExtensionRegistry extensionRegistry) throws IOException;
 
-    static protected void writeMessage(CodedOutputStream output, int tag, Message message) throws IOException {
-        output.writeTag(tag, WIRETYPE_LENGTH_DELIMITED);
-        output.writeRawVarint32(message.serializedSize());
-        message.writeTo(output);
-    }
+    public void writeTo(CodedOutputStream output) throws java.io.IOException;
 
-    static protected <T extends Message> T readGroup(CodedInputStream input, ExtensionRegistry extensionRegistry, int tag, T group) throws IOException {
-        group.mergeFrom(input, extensionRegistry);
-        input.checkLastTagWas(makeTag(tag, WIRETYPE_END_GROUP));
-        return group;
-    }
+    public T clone() throws CloneNotSupportedException;
 
-    static protected <T extends Message> T readMessage(CodedInputStream input, ExtensionRegistry extensionRegistry, T message) throws IOException {
-        int length = input.readRawVarint32();
-        int oldLimit = input.pushLimit(length);
-        message.mergeFrom(input, extensionRegistry);
-        input.checkLastTagWas(0);
-        input.popLimit(oldLimit);
-        return message;
-    }
+    public int serializedSize();
 
-    static protected int computeGroupSize(int tag, Message message) {
-        return CodedOutputStream.computeTagSize(tag) * 2 + message.serializedSize();
-    }
+    public void clear();
 
-    static protected int computeMessageSize(int tag, Message message) {
-        int t = message.serializedSize();
-        return CodedOutputStream.computeTagSize(tag) + CodedOutputStream.computeRawVarint32Size(t) + t;
-    }
+    public T assertInitialized() throws com.google.protobuf.UninitializedMessageException;
 
-    abstract public T mergeFrom(T other);
+    public byte[] toByteArray();
 
-    public T mergeFrom(CodedInputStream input) throws IOException {
-        return mergeFrom(input, ExtensionRegistry.getEmptyRegistry());
-    }
+    public void writeTo(OutputStream output) throws IOException;
 
-    abstract public T mergeFrom(CodedInputStream input, ExtensionRegistry extensionRegistry) throws IOException;
+    public T mergeFrom(ByteString data) throws InvalidProtocolBufferException;
 
-    abstract public void writeTo(CodedOutputStream output) throws java.io.IOException;
+    public T mergeFrom(ByteString data, ExtensionRegistry extensionRegistry) throws InvalidProtocolBufferException;
 
-    abstract public T clone();
+    public T mergeFrom(byte[] data) throws InvalidProtocolBufferException;
 
-    abstract public int serializedSize();
+    public T mergeFrom(byte[] data, ExtensionRegistry extensionRegistry) throws InvalidProtocolBufferException;
 
-    abstract public void clear();
+    public T mergeFrom(InputStream input) throws IOException;
 
-    abstract public T assertInitialized() throws com.google.protobuf.UninitializedMessageException;
-    
-    public byte[] toByteArray() {
-        try {
-            byte[] result = new byte[serializedSize()];
-            CodedOutputStream output = CodedOutputStream.newInstance(result);
-            writeTo(output);
-            output.checkNoSpaceLeft();
-            return result;
-        } catch (IOException e) {
-            throw new RuntimeException("Serializing to a byte array threw an IOException " + "(should never happen).", e);
-        }
-    }
-
-    protected List<String> prefix(List<String> missingFields, String prefix) {
-        ArrayList<String> rc = new ArrayList<String>(missingFields.size());
-        for (String v : missingFields) {
-            rc.add(prefix+v);
-        }
-        return rc;
-    }
-
-    public void writeTo(OutputStream output) throws IOException {
-        CodedOutputStream codedOutput = CodedOutputStream.newInstance(output);
-        writeTo(codedOutput);
-        codedOutput.flush();
-    }
-
-    public T mergeFrom(ByteString data) throws InvalidProtocolBufferException {
-        try {
-            CodedInputStream input = data.newCodedInput();
-            mergeFrom(input);
-            input.checkLastTagWas(0);
-            return (T)this;
-        } catch (InvalidProtocolBufferException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new RuntimeException("Reading from a ByteString threw an IOException (should " + "never happen).", e);
-        }
-    }
-
-    public T mergeFrom(ByteString data, ExtensionRegistry extensionRegistry) throws InvalidProtocolBufferException {
-        try {
-            CodedInputStream input = data.newCodedInput();
-            mergeFrom(input, extensionRegistry);
-            input.checkLastTagWas(0);
-            return (T)this;
-        } catch (InvalidProtocolBufferException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new RuntimeException("Reading from a ByteString threw an IOException (should " + "never happen).", e);
-        }
-    }
-
-    public T mergeFrom(byte[] data) throws InvalidProtocolBufferException {
-        try {
-            CodedInputStream input = CodedInputStream.newInstance(data);
-            mergeFrom(input);
-            input.checkLastTagWas(0);
-            return (T)this;
-        } catch (InvalidProtocolBufferException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new RuntimeException("Reading from a byte array threw an IOException (should " + "never happen).", e);
-        }
-    }
-
-    public T mergeFrom(byte[] data, ExtensionRegistry extensionRegistry) throws InvalidProtocolBufferException {
-        try {
-            CodedInputStream input = CodedInputStream.newInstance(data);
-            mergeFrom(input, extensionRegistry);
-            input.checkLastTagWas(0);
-            return (T)this;
-        } catch (InvalidProtocolBufferException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new RuntimeException("Reading from a byte array threw an IOException (should " + "never happen).", e);
-        }
-    }
-
-    public T mergeFrom(InputStream input) throws IOException {
-        CodedInputStream codedInput = CodedInputStream.newInstance(input);
-        mergeFrom(codedInput);
-        codedInput.checkLastTagWas(0);
-        return (T)this;
-    }
-
-    public T mergeFrom(InputStream input, ExtensionRegistry extensionRegistry) throws IOException {
-        CodedInputStream codedInput = CodedInputStream.newInstance(input);
-        mergeFrom(codedInput, extensionRegistry);
-        codedInput.checkLastTagWas(0);
-        return (T)this;
-    }
+    public T mergeFrom(InputStream input, ExtensionRegistry extensionRegistry) throws IOException;
 
 }
