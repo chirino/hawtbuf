@@ -52,6 +52,8 @@ public interface Message<T> {
 
     public byte[] toByteArray();
 
+    public void writePartialTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException;
+    
     public void writeTo(OutputStream output) throws IOException;
 
     public T mergeFrom(ByteString data) throws InvalidProtocolBufferException;

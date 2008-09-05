@@ -70,7 +70,7 @@ SPECIAL_TOKEN :
 
 <COMMENT> SPECIAL_TOKEN :
 {
-  <("\n" | "\r" | "\r\n" )> : DEFAULT
+  <("\n" | "\r" | "\r\n" | "|")> : DEFAULT
 }
 
 <COMMENT> MORE :
@@ -431,20 +431,26 @@ EnumDescriptor EnumDescriptor(ProtoDescriptor proto, MessageDescriptor parent) :
     Token name;
     LinkedHashMap<String,EnumFieldDescriptor> fields = new LinkedHashMap<String,EnumFieldDescriptor>();
    	EnumDescriptor rc = new EnumDescriptor(proto, parent);
+    LinkedHashMap<String,OptionDescriptor> opts = new LinkedHashMap<String,OptionDescriptor>();
+
     EnumFieldDescriptor enumD;
+    OptionDescriptor optionD;
 }
 {
     <ENUM> name = <ID> <LBRACE>
     (
+    	LOOKAHEAD(2)
+        <OPTION> optionD = OptionDescriptor() <SEMICOLON>
+        { opts.put(optionD.getName(),optionD); }
+    	|
     	enumD = EnumFieldDescriptor(rc) <SEMICOLON>
-    	{
-    		fields.put(enumD.getName(),enumD);
-    	}
+    	{ fields.put(enumD.getName(),enumD); }
     )*
     <RBRACE>
     {
     	rc.setName(name.image);
     	rc.setFields(fields);
+    	rc.setOptions(opts);
     	return rc;
     }
 }

@@ -52,14 +52,14 @@ abstract public class BaseMessage<T> implements Message<T> {
 
     static protected void writeGroup(CodedOutputStream output, int tag, BaseMessage message) throws IOException {
         output.writeTag(tag, WIRETYPE_START_GROUP);
-        message.writeTo(output);
+        message.writePartialTo(output);
         output.writeTag(tag, WIRETYPE_END_GROUP);
     }
 
     static protected void writeMessage(CodedOutputStream output, int tag, BaseMessage message) throws IOException {
         output.writeTag(tag, WIRETYPE_LENGTH_DELIMITED);
         output.writeRawVarint32(message.serializedSize());
-        message.writeTo(output);
+        message.writePartialTo(output);
     }
 
     static protected <T extends BaseMessage> T readGroup(CodedInputStream input, ExtensionRegistry extensionRegistry, int tag, T group) throws IOException {
@@ -114,6 +114,11 @@ abstract public class BaseMessage<T> implements Message<T> {
         CodedOutputStream codedOutput = CodedOutputStream.newInstance(output);
         writeTo(codedOutput);
         codedOutput.flush();
+    }
+    
+    public void writeTo(CodedOutputStream output) throws java.io.IOException {
+        writePartialTo(output);
+        output.writeTag(0, WIRETYPE_END_GROUP);
     }
 
     public T mergeFrom(ByteString data) throws InvalidProtocolBufferException {

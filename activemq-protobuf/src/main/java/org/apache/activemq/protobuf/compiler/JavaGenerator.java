@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
@@ -121,7 +122,7 @@ public class JavaGenerator {
         // Load the options..
         javaPackage = javaPackage(proto);
         outerClassName = javaClassName(proto);
-        optimizeFor = getOption(proto, "optimize_for", "SPEED");
+        optimizeFor = getOption(proto.getOptions(), "optimize_for", "SPEED");
         multipleFiles = isMultipleFilesEnabled(proto);
         
         if( multipleFiles ) {
@@ -259,7 +260,7 @@ public class JavaGenerator {
             staticOption="";
         }
         
-        String javaImplements = getOption(m, "java_implments", null);
+        String javaImplements = getOption(m.getOptions(), "java_implments", null);
         
         String implementsExpression = "";
         if( javaImplements!=null ) {
@@ -343,7 +344,7 @@ public class JavaGenerator {
      * @param m
      */
     private void generateMethodVisitor(MessageDescriptor m) {
-        String javaVisitor = getOption(m, "java_visitor", null);        
+        String javaVisitor = getOption(m.getOptions(), "java_visitor", null);        
         if( javaVisitor!=null ) {
             String returns = "void";
             String throwsException = null;
@@ -376,7 +377,7 @@ public class JavaGenerator {
     }
     
     private void generateMethodType(MessageDescriptor m, String className) {
-        String typeEnum = getOption(m, "java_type_method", null);        
+        String typeEnum = getOption(m.getOptions(), "java_type_method", null);        
         if( typeEnum!=null ) {
             
             TypeDescriptor typeDescriptor = m.getType(typeEnum);
@@ -388,22 +389,23 @@ public class JavaGenerator {
                 return;
             }
             
+            
+            String constant = constantCase(className);
             EnumDescriptor enumDescriptor = (EnumDescriptor)typeDescriptor;
-            if( enumDescriptor.getFields().get(className) == null ) {
-                errors.add("The java_type_method option on the "+m.getName()+" message does not points to the "+typeEnum+" enum but it does not have an entry for "+className);
+            if( enumDescriptor.getFields().get(constant) == null ) {
+                errors.add("The java_type_method option on the "+m.getName()+" message does not points to the "+typeEnum+" enum but it does not have an entry for "+constant);
             }
             
             String type = javaType(typeDescriptor);
             
             p("public "+type+" type() {");
             indent();
-                p("return "+type+"."+className+";");
+                p("return "+type+"."+constant+";");
             unindent();
             p("}");
             p();
         }
     }
-    
     
     private void generateMethodParseFrom(MessageDescriptor m, String className) {
         p("public static "+className+" parseFrom(com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {");
@@ -532,7 +534,7 @@ public class JavaGenerator {
      * @param m
      */
     private void generateMethodWriteTo(MessageDescriptor m) {
-        p("public void writeTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {");
+        p("public void writePartialTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {");
         indent();
         for (FieldDescriptor field : m.getFields().values()) {
             String uname = uCamel(field.getName());
@@ -1284,13 +1286,35 @@ public class JavaGenerator {
         p("      return null;");
         p("   }");
         p("}");
+        p();
         
+        
+        String createMessage = getOption(ed.getOptions(), "java_create_message", null);        
+        if( "true".equals(createMessage) ) {
+            p("public final org.apache.activemq.protobuf.Message createMessage() {");
+            indent();
+            p("switch (this) {");
+            indent();
+            for (EnumFieldDescriptor field : ed.getFields().values()) {
+                p("case "+field.getName()+":");
+                String type = constantToUCamelCase(field.getName());
+                p("   return new "+type+"();");
+            }
+            p("default:");
+            p("   return null;");
+            unindent();
+            p("}");
+            unindent();
+            p("}");
+            p();
+        }
         
         unindent();
         p("}");
         p();
     }
-
+    
+    
     
     private String javaCollectionType(FieldDescriptor field) {
         if( field.isInteger32Type() ) {
@@ -1369,11 +1393,11 @@ public class JavaGenerator {
     }
 
     private String javaClassName(ProtoDescriptor proto) {
-        return getOption(proto, "java_outer_classname", uCamel(removeFileExtension(proto.getName())));
+        return getOption(proto.getOptions(), "java_outer_classname", uCamel(removeFileExtension(proto.getName())));
     }
     
     private boolean isMultipleFilesEnabled(ProtoDescriptor proto) {
-        return "true".equals(getOption(proto, "java_multiple_files", "false"));
+        return "true".equals(getOption(proto.getOptions(), "java_multiple_files", "false"));
     }
 
 
@@ -1383,7 +1407,7 @@ public class JavaGenerator {
             name = name.replace('-', '.');
             name = name.replace('/', '.');
         }
-        return getOption(proto, "java_package", name);
+        return getOption(proto.getOptions(), "java_package", name);
     }
 
 
@@ -1412,22 +1436,14 @@ public class JavaGenerator {
         w.println();
     }
 
-    private String getOption(ProtoDescriptor proto, String optionName, String defaultValue) {
-        OptionDescriptor optionDescriptor = proto.getOptions().get(optionName);
+    private String getOption(Map<String, OptionDescriptor> options, String optionName, String defaultValue) {
+        OptionDescriptor optionDescriptor = options.get(optionName);
         if (optionDescriptor == null) {
             return defaultValue;
         }
         return optionDescriptor.getValue();
     }
-    
-    private String getOption(MessageDescriptor md, String optionName, String defaultValue) {
-        OptionDescriptor optionDescriptor = md.getOptions().get(optionName);
-        if (optionDescriptor == null) {
-            return defaultValue;
-        }
-        return optionDescriptor.getValue();
-    }
-    
+        
     static private String removeFileExtension(String name) {
         return name.replaceAll("\\..*", "");
     }
@@ -1455,6 +1471,42 @@ public class JavaGenerator {
             return name;
         String uCamel = uCamel(name);
         return uCamel.substring(0,1).toLowerCase()+uCamel.substring(1);
+    }
+    
+    
+    private String constantToUCamelCase(String name) {
+        boolean upNext=true;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if( Character.isJavaIdentifierPart(c) && Character.isLetterOrDigit(c)) {
+                if( upNext ) {
+                    c = Character.toUpperCase(c);
+                    upNext=false;
+                } else {
+                    c = Character.toLowerCase(c);
+                }
+                sb.append(c);
+            } else {
+                upNext=true;
+            }
+        }
+        return sb.toString();
+    }
+
+
+    private String constantCase(String name) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if( i!=0 ) {
+                if( Character.isUpperCase(c) ) {
+                    sb.append("_");
+                }
+            }
+            sb.append(Character.toUpperCase(c));
+        }
+        return sb.toString();
     }
 
     public File getOut() {

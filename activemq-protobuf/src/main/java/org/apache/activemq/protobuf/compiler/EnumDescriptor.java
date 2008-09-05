@@ -26,6 +26,7 @@ public class EnumDescriptor implements TypeDescriptor {
     private Map<String,EnumFieldDescriptor> fields= new LinkedHashMap<String, EnumFieldDescriptor>();
     private final ProtoDescriptor protoDescriptor;
     private final MessageDescriptor parent;
+    private Map<String, OptionDescriptor> options = new LinkedHashMap<String, OptionDescriptor>();
 
     public EnumDescriptor(ProtoDescriptor protoDescriptor, MessageDescriptor parent) {
         this.protoDescriptor = protoDescriptor;
@@ -70,6 +71,14 @@ public class EnumDescriptor implements TypeDescriptor {
 
     public boolean isEnum() {
         return true;
+    }
+
+    public Map<String, OptionDescriptor> getOptions() {
+        return options;
+    }
+
+    public void setOptions(Map<String, OptionDescriptor> options) {
+        this.options = options;
     }
 
 
