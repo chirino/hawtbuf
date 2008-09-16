@@ -94,7 +94,7 @@ abstract public class BaseMessage<T> implements Message<T> {
         try {
             byte[] result = new byte[serializedSize()];
             CodedOutputStream output = CodedOutputStream.newInstance(result);
-            writeTo(output);
+            writePartialTo(output);
             output.checkNoSpaceLeft();
             return result;
         } catch (IOException e) {
@@ -176,14 +176,12 @@ abstract public class BaseMessage<T> implements Message<T> {
     public T mergeFrom(InputStream input) throws IOException {
         CodedInputStream codedInput = CodedInputStream.newInstance(input);
         mergeFrom(codedInput);
-        codedInput.checkLastTagWas(0);
         return (T)this;
     }
 
     public T mergeFrom(InputStream input, ExtensionRegistry extensionRegistry) throws IOException {
         CodedInputStream codedInput = CodedInputStream.newInstance(input);
         mergeFrom(codedInput, extensionRegistry);
-        codedInput.checkLastTagWas(0);
         return (T)this;
     }
 
