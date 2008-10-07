@@ -111,6 +111,6 @@ public class GeneratedMessageTest extends TestCase {
         .setNestedEnum(MessageWithNoOuter.NestedEnum.BAZ)
         .setForeignEnum(EnumWithNoOuter.BAR)
         ;
-    assertEquals(message.toString(), MessageWithNoOuter.parseFrom(message.toByteArray()).toString());
+    assertEquals(message.toString(), MessageWithNoOuter.parseUnframed(message.toUnframedByteArray()).toString());
   }
 }

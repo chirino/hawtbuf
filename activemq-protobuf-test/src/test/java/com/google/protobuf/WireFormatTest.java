@@ -28,10 +28,10 @@ public class WireFormatTest extends TestCase {
   public void testSerialization() throws Exception {
     TestAllTypes message = TestUtil.getAllSet();
 
-    byte[] rawBytes = message.toByteArray();
-    assertEquals(rawBytes.length, message.serializedSize());
+    byte[] rawBytes = message.toUnframedByteArray();
+    assertEquals(rawBytes.length, message.serializedSizeUnframed());
 
-    TestAllTypes message2 = TestAllTypes.parseFrom(rawBytes);
+    TestAllTypes message2 = TestAllTypes.parseUnframed(rawBytes);
 
     TestUtil.assertAllFieldsSet(message2);
   }

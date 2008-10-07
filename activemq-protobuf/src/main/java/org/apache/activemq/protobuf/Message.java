@@ -16,56 +16,59 @@
  */
 package org.apache.activemq.protobuf;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.InvalidProtocolBufferException;
-
-import static org.apache.activemq.protobuf.WireInfo.*;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 public interface Message<T> {
 
-    public T mergeFrom(T other);
-
-    public T mergeFrom(CodedInputStream input) throws IOException;
-
-    public T mergeFrom(CodedInputStream input, ExtensionRegistry extensionRegistry) throws IOException;
-
-    public void writeTo(CodedOutputStream output) throws java.io.IOException;
-
     public T clone() throws CloneNotSupportedException;
 
-    public int serializedSize();
+    public int serializedSizeUnframed();
+    
+    public int serializedSizeFramed();
 
     public void clear();
 
     public T assertInitialized() throws com.google.protobuf.UninitializedMessageException;
 
-    public byte[] toByteArray();
+    public T mergeFrom(T other);
 
-    public void writePartialTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException;
+
+    public T mergeUnframed(byte[] data) throws InvalidProtocolBufferException;
     
-    public void writeTo(OutputStream output) throws IOException;
+    public T mergeFramed(byte[] data) throws InvalidProtocolBufferException;
 
-    public T mergeFrom(ByteString data) throws InvalidProtocolBufferException;
+    public T mergeUnframed(CodedInputStream input) throws IOException;
+    
+    public T mergeFramed(CodedInputStream input) throws IOException;
+    
+    public T mergeUnframed(ByteString data) throws InvalidProtocolBufferException;
 
-    public T mergeFrom(ByteString data, ExtensionRegistry extensionRegistry) throws InvalidProtocolBufferException;
+    public T mergeFramed(ByteString data) throws InvalidProtocolBufferException;
+    
+    public T mergeUnframed(InputStream input) throws IOException;
+    
+    public T mergeFramed(InputStream input) throws IOException;
 
-    public T mergeFrom(byte[] data) throws InvalidProtocolBufferException;
+    
 
-    public T mergeFrom(byte[] data, ExtensionRegistry extensionRegistry) throws InvalidProtocolBufferException;
+    public byte[] toUnframedByteArray();
+   
+    public byte[] toFramedByteArray();
+    
+    public void writeUnframed(CodedOutputStream output) throws java.io.IOException;
+    
+    public void writeFramed(CodedOutputStream output) throws java.io.IOException;
+    
+    public void writeUnframed(OutputStream output) throws IOException;
+    
+    public void writeFramed(OutputStream output) throws java.io.IOException;
 
-    public T mergeFrom(InputStream input) throws IOException;
-
-    public T mergeFrom(InputStream input, ExtensionRegistry extensionRegistry) throws IOException;
 
 }

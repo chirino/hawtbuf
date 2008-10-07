@@ -23,8 +23,6 @@ import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_START_GROUP;
 import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_VARINT;
 import static org.apache.activemq.protobuf.WireInfo.makeTag;
 
-import com.google.protobuf.ByteString;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -53,6 +51,7 @@ public class JavaGenerator {
     private String optimizeFor;
     private ArrayList<String> errors = new ArrayList<String>();
     private boolean multipleFiles;
+	private boolean defferedUnmarshall;
 
     public static void main(String[] args) {
         
@@ -124,6 +123,7 @@ public class JavaGenerator {
         outerClassName = javaClassName(proto);
         optimizeFor = getOption(proto.getOptions(), "optimize_for", "SPEED");
         multipleFiles = isMultipleFilesEnabled(proto);
+        defferedUnmarshall = Boolean.getBoolean(getOption(proto.getOptions(), "deferred_unmarshall", "false"));
         
         if( multipleFiles ) {
             generateProtoFile();
@@ -288,6 +288,9 @@ public class JavaGenerator {
             }
         }
 
+//        if( defferedUnmarshall ) {
+//        }
+
         // Generate the field accessors..
         for (FieldDescriptor field : m.getFields().values()) {
             generateFieldAccessor(className, field);
@@ -317,7 +320,7 @@ public class JavaGenerator {
         generateMethodVisitor(m);
                 
         generateMethodType(m, className);
-        
+                
         unindent();
         p("}");
         p();
@@ -408,54 +411,68 @@ public class JavaGenerator {
     }
     
     private void generateMethodParseFrom(MessageDescriptor m, String className) {
-        p("public static "+className+" parseFrom(com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {");
+        p("public static "+className+" parseUnframed(com.google.protobuf.CodedInputStream data) throws com.google.protobuf.InvalidProtocolBufferException, java.io.IOException {");
         indent();
-        p("return new "+className+"().mergeFrom(data).checktInitialized();");
+        p("return new "+className+"().mergeUnframed(data).checktInitialized();");
         unindent();
         p("}");
         p();
 
-        p("public static "+className+" parseFrom(com.google.protobuf.ByteString data, com.google.protobuf.ExtensionRegistry extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {");
+        p("public static "+className+" parseUnframed(com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {");
         indent();
-        p("return new "+className+"().mergeFrom(data, extensionRegistry).checktInitialized();");
+        p("return new "+className+"().mergeUnframed(data).checktInitialized();");
         unindent();
         p("}");
         p();
 
-        p("public static "+className+" parseFrom(byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {");
+        p("public static "+className+" parseUnframed(byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {");
         indent();
-        p("return new "+className+"().mergeFrom(data).checktInitialized();");
-        unindent();
-        p("}");
-        p();
-
-        p("public static "+className+" parseFrom(byte[] data, com.google.protobuf.ExtensionRegistry extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {");
-        indent();
-        p("return new "+className+"().mergeFrom(data,extensionRegistry).checktInitialized();");
+        p("return new "+className+"().mergeUnframed(data).checktInitialized();");
         unindent();
         p("}");
         p();
         
-        p("public static "+className+" parseFrom(java.io.InputStream data) throws com.google.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        p("public static "+className+" parseUnframed(java.io.InputStream data) throws com.google.protobuf.InvalidProtocolBufferException, java.io.IOException {");
         indent();
-        p("return new "+className+"().mergeFrom(data).checktInitialized();");
+        p("return new "+className+"().mergeUnframed(data).checktInitialized();");
+        unindent();
+        p("}");
+        p();
+        
+        p("public static "+className+" parseFramed(com.google.protobuf.CodedInputStream data) throws com.google.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        indent();
+        p("return new "+className+"().mergeFramed(data).checktInitialized();");
+        unindent();
+        p("}");
+        p();
+        
+        p("public static "+className+" parseFramed(com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("return new "+className+"().mergeFramed(data).checktInitialized();");
         unindent();
         p("}");
         p();
 
-        p("public static "+className+" parseFrom(java.io.InputStream data, com.google.protobuf.ExtensionRegistry extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        p("public static "+className+" parseFramed(byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {");
         indent();
-        p("return new "+className+"().mergeFrom(data,extensionRegistry).checktInitialized();");
+        p("return new "+className+"().mergeFramed(data).checktInitialized();");
         unindent();
         p("}");
-        p();        
+        p();
+        
+        p("public static "+className+" parseFramed(java.io.InputStream data) throws com.google.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        indent();
+        p("return new "+className+"().mergeFramed(data).checktInitialized();");
+        unindent();
+        p("}");
+        p();
     }
 
     /**
      * @param m
      */
     private void generateMethodSerializedSize(MessageDescriptor m) {
-        p("public int serializedSize() {");
+        p("public int serializedSizeUnframed() {");
         indent();
         p("if (memoizedSerializedSize != -1)");
         p("   return memoizedSerializedSize;");
@@ -534,7 +551,7 @@ public class JavaGenerator {
      * @param m
      */
     private void generateMethodWriteTo(MessageDescriptor m) {
-        p("public void writePartialTo(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {");
+        p("public void writeUnframed(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {");
         indent();
         for (FieldDescriptor field : m.getFields().values()) {
             String uname = uCamel(field.getName());
@@ -608,32 +625,20 @@ public class JavaGenerator {
      * @param className
      */
     private void generateMethodMergeFromStream(MessageDescriptor m, String className) {
-        p("public "+className+" mergeFrom(com.google.protobuf.CodedInputStream input, com.google.protobuf.ExtensionRegistry extensionRegistry) throws java.io.IOException {");
+        p("public "+className+" mergeUnframed(com.google.protobuf.CodedInputStream input) throws java.io.IOException {");
         indent(); {
-          //TODO: handle unknown fields
-          // UnknownFieldSet.Builder unknownFields = com.google.protobuf.UnknownFieldSet.newBuilder(this.unknownFields);
-            
           p("while (true) {");
           indent(); {
               p("int tag = input.readTag();");
-              // Is it an end group tag?
               p("if ((tag & 0x07) == 4) {");
               p("   return this;");
               p("}");
               
               p("switch (tag) {");
-              // The end of stream..
               p("case 0:");
-//              p("   this.setUnknownFields(unknownFields.build());");
               p("   return this;");
               p("default: {");
-              
-              //TODO: handle unknown field types.
-//              p("   if (!parseUnknownField(input, unknownFields, extensionRegistry, tag)) {");
-//              p("       this.setUnknownFields(unknownFields.build());");
-//              p("       return this;");
-//              p("   }");
-              
+
               p("   break;");
               p("}");
               
@@ -645,9 +650,6 @@ public class JavaGenerator {
                   if( repeated ) {
                       setter = "get"+uname+"List().add";
                   }
-                  
-                  
-                  
                   if( field.getType()==FieldDescriptor.STRING_TYPE ) {
                       p("case "+makeTag(field.getTag(), WIRETYPE_LENGTH_DELIMITED)+":");
                       indent();
@@ -731,15 +733,15 @@ public class JavaGenerator {
                       indent();
                       String type = javaType(field);
                       if( repeated ) {
-                          p(setter+"(readGroup(input, extensionRegistry, "+field.getTag()+", new "+type+"()));");
+                          p(setter+"(readGroup(input, "+field.getTag()+", new "+type+"()));");
                       } else {
                           p("if (has"+uname+"()) {");
                           indent();
-                          p("readGroup(input, extensionRegistry, "+field.getTag()+", get"+uname+"());");
+                          p("readGroup(input, "+field.getTag()+", get"+uname+"());");
                           unindent();
                           p("} else {");
                           indent();
-                          p(setter+"(readGroup(input, extensionRegistry, "+field.getTag()+",new "+type+"()));");
+                          p(setter+"(readGroup(input, "+field.getTag()+",new "+type+"()));");
                           unindent();
                           p("}");
                       }
@@ -749,15 +751,15 @@ public class JavaGenerator {
                       indent();
                       String type = javaType(field);
                       if( repeated ) {
-                          p(setter+"(readMessage(input, extensionRegistry, new "+type+"()));");
+                          p(setter+"(new "+type+"().mergeFramed(input));");
                       } else {
                           p("if (has"+uname+"()) {");
                           indent();
-                          p("readMessage(input, extensionRegistry,get"+uname+"());");
+                          p("get"+uname+"().mergeFramed(input);");
                           unindent();
                           p("} else {");
                           indent();
-                          p(setter+"(readMessage(input, extensionRegistry, new "+type+"()));");
+                          p(setter+"(new "+type+"().mergeFramed(input));");
                           unindent();
                           p("}");
                       }
