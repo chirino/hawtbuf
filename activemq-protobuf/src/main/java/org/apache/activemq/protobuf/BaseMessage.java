@@ -39,6 +39,10 @@ abstract public class BaseMessage<T> implements Message<T> {
     
     abstract public T clone() throws CloneNotSupportedException;
 
+	public void clear() {
+		memoizedSerializedSize = -1;
+	}
+
     ///////////////////////////////////////////////////////////////////
     // Write related helpers.
     ///////////////////////////////////////////////////////////////////
@@ -225,6 +229,7 @@ abstract public class BaseMessage<T> implements Message<T> {
         return rc;
     }
 
+    abstract protected T checktInitialized() throws InvalidProtocolBufferException;
 
     /**
      * Read a raw Varint from the stream.  If larger than 32 bits, discard the
@@ -274,4 +279,8 @@ abstract public class BaseMessage<T> implements Message<T> {
     	}
     	return (byte) rc;
     }
+
+	protected void loadAndClear() {
+		memoizedSerializedSize=-1;
+	}
 }
