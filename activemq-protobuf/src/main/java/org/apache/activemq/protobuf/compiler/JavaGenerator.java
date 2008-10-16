@@ -29,7 +29,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +51,7 @@ public class JavaGenerator {
     private ArrayList<String> errors = new ArrayList<String>();
     private boolean multipleFiles;
 	private boolean deferredDecode;
+    private boolean auto_clear_optional_fields;
 
     public static void main(String[] args) {
         
@@ -124,7 +124,8 @@ public class JavaGenerator {
 //        optimizeFor = getOption(proto.getOptions(), "optimize_for", "SPEED");
         multipleFiles = isMultipleFilesEnabled(proto);
 		deferredDecode = Boolean.parseBoolean(getOption(proto.getOptions(), "deferred_decode", "false"));
-        
+        auto_clear_optional_fields = Boolean.parseBoolean(getOption(proto.getOptions(), "auto_clear_optional_fields", "false"));
+		
         if( multipleFiles ) {
             generateProtoFile();
         } else {
@@ -271,9 +272,11 @@ public class JavaGenerator {
         if( deferredDecode ) {
             baseClass = "org.apache.activemq.protobuf.DeferredDecodeMessage";
         }
+        if( m.getBaseType()!=null ) {
+            baseClass = javaType(m.getBaseType())+"Base";
+        }
         
-        
-        p("public "+staticOption+"final class " + className + " extends "+baseClass+"<" + className + "> "+implementsExpression+"{");
+        p(staticOption+"public final class " + className + " extends "+className+"Base<"+className+"> "+implementsExpression+"{");
         p();
 
         indent();
@@ -289,18 +292,14 @@ public class JavaGenerator {
 
         // Generate the Group Messages
         for (FieldDescriptor field : m.getFields().values()) {
+        	if( isInBaseClass(m, field) ) {
+        		continue;
+        	}
             if( field.isGroup() ) {
                 generateMessageBean(field.getGroup());
             }
         }
 
-//        if( defferedUnmarshall ) {
-//        }
-
-        // Generate the field accessors..
-        for (FieldDescriptor field : m.getFields().values()) {
-            generateFieldAccessor(className, field);
-        }
         
         generateMethodAssertInitialized(m, className);
 
@@ -332,7 +331,29 @@ public class JavaGenerator {
         unindent();
         p("}");
         p();
+        
+        p(staticOption+"abstract class " + className + "Base<T> extends "+baseClass+"<T> {");
+        p();
+        indent();
+        
+        // Generate the field accessors..
+        for (FieldDescriptor field : m.getFields().values()) {
+            if( isInBaseClass(m, field) ) {
+                continue;
+            }
+            generateFieldAccessor(field);
+        }
+        
+        unindent();
+        p("}");
+        p();
     }
+
+	private boolean isInBaseClass(MessageDescriptor m, FieldDescriptor field) {
+		if( m.getBaseType() ==null )
+			return false;
+		return m.getBaseType().getFields().containsKey(field.getName());
+	}
 
 	/**
      * If the java_visitor message option is set, then this method generates a visitor method.  The option 
@@ -997,7 +1018,7 @@ public class JavaGenerator {
 	 * @param m
 	 */
     private void generateMethodClear(MessageDescriptor m) {
-        p("public final void clear() {");
+        p("public void clear() {");
         indent();
         p("super.clear();");
         for (FieldDescriptor field : m.getFields().values()) {
@@ -1011,47 +1032,9 @@ public class JavaGenerator {
 
     private void generateMethodAssertInitialized(MessageDescriptor m, String className) {
         
-        
-        
-        p("public final boolean isInitialized() {");
+        p("public java.util.ArrayList<String> missingFields() {");
         indent();
-        p("return missingFields().isEmpty();");
-        unindent();
-        p("}");
-        p();
-        
-        p("public final "+className+" assertInitialized() throws org.apache.activemq.protobuf.UninitializedMessageException {");
-        indent();
-        p("java.util.ArrayList<String> missingFields = missingFields();");
-        p("if( !missingFields.isEmpty()) {");
-        indent();
-        p("throw new org.apache.activemq.protobuf.UninitializedMessageException(missingFields);");
-        unindent();
-        p("}");
-        p("return this;");
-        unindent();
-        p("}");
-        p();
-        
-        p("protected final "+className+" checktInitialized() throws com.google.protobuf.InvalidProtocolBufferException {");
-        indent();
-        p("java.util.ArrayList<String> missingFields = missingFields();");
-        p("if( !missingFields.isEmpty()) {");
-        indent();
-        p("throw new org.apache.activemq.protobuf.UninitializedMessageException(missingFields).asInvalidProtocolBufferException();");
-        unindent();
-        p("}");
-        p("return this;");
-        unindent();
-        p("}");
-        p();
-
-        p("public final java.util.ArrayList<String> missingFields() {");
-        indent();
-        if( deferredDecode ) {
-        	p("load();");
-        }        
-        p("java.util.ArrayList<String> missingFields = new java.util.ArrayList<String>();");
+        p("java.util.ArrayList<String> missingFields = super.missingFields();");
         
         for (FieldDescriptor field : m.getFields().values()) {
             String uname = uCamel(field.getName());
@@ -1135,7 +1118,7 @@ public class JavaGenerator {
                 if( field.getTypeDescriptor()!=null && !field.getTypeDescriptor().isEnum()) {
                     p("sb.append(prefix+\""+field.getName()+"[\"+i+\"] {\\n\");");
                     p("l.get(i).toString(sb, prefix+\"  \");");
-                    p("sb.append(\"}\\n\");");
+                    p("sb.append(prefix+\"}\\n\");");
                 } else {
                     p("sb.append(prefix+\""+field.getName()+"[\"+i+\"]: \");");
                     p("sb.append(l.get(i));");
@@ -1147,7 +1130,7 @@ public class JavaGenerator {
                 if( field.getTypeDescriptor()!=null && !field.getTypeDescriptor().isEnum()) {
                     p("sb.append(prefix+\""+field.getName()+" {\\n\");");
                     p("get" + uname + "().toString(sb, prefix+\"  \");");
-                    p("sb.append(\"}\\n\");");
+                    p("sb.append(prefix+\"}\\n\");");
                 } else {
                     p("sb.append(prefix+\""+field.getName()+": \");");
                     p("sb.append(get" + uname + "());");
@@ -1170,7 +1153,7 @@ public class JavaGenerator {
      * @param field
      * @param className 
      */
-    private void generateFieldAccessor(String className, FieldDescriptor field) {
+    private void generateFieldAccessor(FieldDescriptor field) {
         
         String lname = lCamel(field.getName());
         String uname = uCamel(field.getName());
@@ -1212,11 +1195,11 @@ public class JavaGenerator {
             p("}");
             p();
 
-            p("public "+className+" set" + uname + "List(java.util.List<" + type + "> " + lname + ") {");
+            p("public T set" + uname + "List(java.util.List<" + type + "> " + lname + ") {");
             indent();
           	p("loadAndClear();");
             p("this.f_" + lname + " = " + lname + ";");
-            p("return this;");
+            p("return (T)this;");
             unindent();
             p("}");
             p();
@@ -1251,29 +1234,29 @@ public class JavaGenerator {
             p("}");
             p();
                             
-            p("public "+className+" set" + uname + "(int index, " + type + " value) {");
+            p("public T set" + uname + "(int index, " + type + " value) {");
             indent();
           	p("loadAndClear();");
             p("get" + uname + "List().set(index, value);");
-            p("return this;");
+            p("return (T)this;");
             unindent();
             p("}");
             p();
             
-            p("public "+className+" add" + uname + "(" + type + " value) {");
+            p("public T add" + uname + "(" + type + " value) {");
             indent();
           	p("loadAndClear();");
             p("get" + uname + "List().add(value);");
-            p("return this;");
+            p("return (T)this;");
             unindent();
             p("}");
             p();
             
-            p("public "+className+" addAll" + uname + "(java.lang.Iterable<? extends " + type + "> collection) {");
+            p("public T addAll" + uname + "(java.lang.Iterable<? extends " + type + "> collection) {");
             indent();
           	p("loadAndClear();");
             p("super.addAll(collection, get" + uname + "List());");
-            p("return this;");
+            p("return (T)this;");
             unindent();
             p("}");
             p();
@@ -1326,14 +1309,22 @@ public class JavaGenerator {
             p("}");
             p();
 
-            p("public "+className+" set" + uname + "(" + type + " " + lname + ") {");
+            p("public T set" + uname + "(" + type + " " + lname + ") {");
             indent();
           	p("loadAndClear();");
             if (primitive) {
-                p("this.b_" + lname + " = true;");
+                if( auto_clear_optional_fields && field.isOptional() ) {
+                    if( field.isStringType() && !"null".equals(typeDefault)) {
+                        p("this.b_" + lname + " = ("+lname+" != "+typeDefault+");");
+                    } else {
+                        p("this.b_" + lname + " = ("+lname+" != "+typeDefault+");");
+                    }
+                } else {
+                    p("this.b_" + lname + " = true;");
+                }
             }
             p("this.f_" + lname + " = " + lname + ";");
-            p("return this;");
+            p("return (T)this;");
             unindent();
             p("}");
             p();
@@ -1496,7 +1487,7 @@ public class JavaGenerator {
         
         String createMessage = getOption(ed.getOptions(), "java_create_message", null);        
         if( "true".equals(createMessage) ) {
-            p("public final org.apache.activemq.protobuf.Message createMessage() {");
+            p("public org.apache.activemq.protobuf.Message createMessage() {");
             indent();
             p("switch (this) {");
             indent();
@@ -1704,10 +1695,8 @@ public class JavaGenerator {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < name.length(); i++) {
             char c = name.charAt(i);
-            if( i!=0 ) {
-                if( Character.isUpperCase(c) ) {
-                    sb.append("_");
-                }
+            if( i!=0 && Character.isUpperCase(c) ) {
+                sb.append("_");
             }
             sb.append(Character.toUpperCase(c));
         }

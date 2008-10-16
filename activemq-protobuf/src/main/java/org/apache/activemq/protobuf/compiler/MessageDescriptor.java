@@ -17,9 +17,12 @@
 package org.apache.activemq.protobuf.compiler;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.sun.org.apache.bcel.internal.generic.BASTORE;
 
 
 public class MessageDescriptor implements TypeDescriptor {
@@ -33,6 +36,7 @@ public class MessageDescriptor implements TypeDescriptor {
     private List<MessageDescriptor> extendsList = new ArrayList<MessageDescriptor>();
     private Map<String, OptionDescriptor> options = new LinkedHashMap<String, OptionDescriptor>();
     private final MessageDescriptor parent;
+	private MessageDescriptor baseType;
 
     public MessageDescriptor(ProtoDescriptor protoDescriptor, MessageDescriptor parent) {
         this.protoDescriptor = protoDescriptor;
@@ -40,6 +44,30 @@ public class MessageDescriptor implements TypeDescriptor {
     }
     
     public void validate(List<String> errors) {
+        String baseName = getOption(getOptions(), "base_type", null);
+        if( baseName!=null ) {
+            if( baseType==null ) {
+                baseType = (MessageDescriptor) getType(baseName);
+            }
+            if( baseType == null ) {
+                baseType = (MessageDescriptor) getProtoDescriptor().getType(baseName);
+            }
+            if( baseType == null ) {
+                errors.add("base_type option not valid, type not found: "+baseName);
+            }
+            
+            // Assert that all the fields in the base type are defined in this message defintion too.
+            HashSet<String> baseFieldNames = new HashSet<String>(baseType.getFields().keySet());
+            baseFieldNames.removeAll(getFields().keySet());
+            
+            // Some fields were not defined in the sub class..
+            if( !baseFieldNames.isEmpty() ) {
+            	for (String fieldName : baseFieldNames) {
+                    errors.add("base_type "+baseName+" field "+fieldName+" not defined in "+getName());
+				}
+            }
+        }
+
         for (FieldDescriptor field : fields.values()) {
             field.validate(errors);
         }
@@ -49,6 +77,14 @@ public class MessageDescriptor implements TypeDescriptor {
         for (MessageDescriptor o : messages.values()) {
             o.validate(errors);
         }
+    }
+    
+    public String getOption(Map<String, OptionDescriptor> options, String optionName, String defaultValue) {
+        OptionDescriptor optionDescriptor = options.get(optionName);
+        if (optionDescriptor == null) {
+            return defaultValue;
+        }
+        return optionDescriptor.getValue();
     }
 
     public void setName(String name) {
@@ -142,5 +178,9 @@ public class MessageDescriptor implements TypeDescriptor {
     public boolean isEnum() {
         return false;
     }
+
+	public MessageDescriptor getBaseType() {
+		return baseType;
+	}
 
 }

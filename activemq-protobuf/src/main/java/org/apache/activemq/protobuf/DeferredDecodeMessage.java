@@ -21,71 +21,76 @@ import java.io.IOException;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-abstract public class DeferredDecodeMessage<T> extends BaseMessage<T>{
+abstract public class DeferredDecodeMessage<T> extends BaseMessage<T> {
 
-	protected byte[] encodedForm;
-	protected boolean decoded=true;
+    protected byte[] encodedForm;
+    protected boolean decoded = true;
 
-	@Override
+    @Override
     public T mergeFramed(CodedInputStream input) throws IOException {
         int length = input.readRawVarint32();
         int oldLimit = input.pushLimit(length);
-        T rc=  mergeUnframed(input.readRawBytes(length));
+        T rc = mergeUnframed(input.readRawBytes(length));
         input.popLimit(oldLimit);
         return rc;
     }
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public T mergeUnframed(byte[] data) throws InvalidProtocolBufferException {
-		encodedForm = data;
-		decoded=false;
-		return (T)this;
-	}
+    @SuppressWarnings("unchecked")
+    @Override
+    public T mergeUnframed(byte[] data) throws InvalidProtocolBufferException {
+        encodedForm = data;
+        decoded = false;
+        return (T) this;
+    }
 
-	@Override
-	public byte[] toUnframedByteArray() {
-		if( encodedForm==null ) {
-			encodedForm = super.toUnframedByteArray();
-		}
-		return encodedForm;
-	}
+    @Override
+    public byte[] toUnframedByteArray() {
+        if (encodedForm == null) {
+            encodedForm = super.toUnframedByteArray();
+        }
+        return encodedForm;
+    }
 
-	protected void load() {
-		if (!decoded) {
-			decoded = true;
-			try {
-				byte[] originalForm = encodedForm;
-				CodedInputStream input = CodedInputStream.newInstance(originalForm);
-				mergeUnframed(input);
-				input.checkLastTagWas(0);
-				// We need to reset the encoded form because the mergeUnframed from a stream clears it out.
-				encodedForm = originalForm;
-				checktInitialized();
-			} catch (Throwable e) {
-				throw new RuntimeException("Deferred message decoding failed: "+e.getMessage(), e);
-			}
-		}
-	}
-	
-	protected void loadAndClear() {
-		super.loadAndClear();
-		load();
-		encodedForm = null;
-	}
+    protected void load() {
+        if (!decoded) {
+            decoded = true;
+            try {
+                byte[] originalForm = encodedForm;
+                encodedForm=null;
+                CodedInputStream input = CodedInputStream.newInstance(originalForm);
+                mergeUnframed(input);
+                input.checkLastTagWas(0);
+                // We need to reset the encoded form because the mergeUnframed
+                // from a stream clears it out.
+                encodedForm = originalForm;
+                checktInitialized();
+            } catch (Throwable e) {
+                throw new RuntimeException("Deferred message decoding failed: " + e.getMessage(), e);
+            }
+        }
+    }
 
-	public void clear() {
-		super.clear();
-		encodedForm = null;
-		decoded = true;
-	}
+    protected void loadAndClear() {
+        super.loadAndClear();
+        load();
+//        if( encodedForm!=null ) {
+//            System.out.println("crap.");
+//        }
+        encodedForm = null;
+    }
 
-	public boolean isDecoded() {
-		return decoded;
-	}
-	
-	public boolean isEncoded() {
-		return encodedForm!=null;
-	}
+    public void clear() {
+        super.clear();
+        encodedForm = null;
+        decoded = true;
+    }
+
+    public boolean isDecoded() {
+        return decoded;
+    }
+
+    public boolean isEncoded() {
+        return encodedForm != null;
+    }
 
 }

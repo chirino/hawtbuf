@@ -107,7 +107,6 @@ public class FieldDescriptor {
                 typeDescriptor = parent.getProtoDescriptor().getType(type);
             }
             if( typeDescriptor == null ) {
-                typeDescriptor = parent.getProtoDescriptor().getType(type);
                 errors.add("Field type not found: "+type);
             }
         }

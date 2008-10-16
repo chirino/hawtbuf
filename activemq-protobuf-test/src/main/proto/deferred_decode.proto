@@ -28,7 +28,9 @@ message Foo {
 
 
 message Bar {
- 
+  option base_type=Foo;
+
+  // These are the Foo fields.  
   optional int32 field1 =  1;
   optional int64 field2 =  2;
  
