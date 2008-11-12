@@ -22,19 +22,20 @@
 
 package com.google.protobuf;
 
-import protobuf_unittest.UnittestProto;
-import protobuf_unittest.UnittestProto.TestAllTypes;
-import protobuf_unittest.UnittestProto.TestAllExtensions;
-import protobuf_unittest.UnittestProto.ForeignMessage;
-import protobuf_unittest.UnittestProto.ForeignEnum;
-import com.google.protobuf.test.UnittestImport.ImportMessage;
-import com.google.protobuf.test.UnittestImport.ImportEnum;
-
-import junit.framework.Assert;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+
+import junit.framework.Assert;
+
+import org.apache.activemq.protobuf.ByteString;
+
+import protobuf_unittest.UnittestProto.ForeignEnum;
+import protobuf_unittest.UnittestProto.ForeignMessage;
+import protobuf_unittest.UnittestProto.TestAllTypes;
+
+import com.google.protobuf.test.UnittestImport.ImportEnum;
+import com.google.protobuf.test.UnittestImport.ImportMessage;
 
 /**
  * Contains methods for setting all fields of {@code TestAllTypes} to

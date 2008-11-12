@@ -16,12 +16,10 @@
  */
 package org.apache.activemq.protobuf;
 
-import org.apache.activemq.protobuf.DeferredUnmarshal.Foo;
-import org.apache.activemq.protobuf.DeferredUnmarshal.Bar;
-
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import junit.framework.TestCase;
+
+import org.apache.activemq.protobuf.DeferredUnmarshal.Bar;
+import org.apache.activemq.protobuf.DeferredUnmarshal.Foo;
 
 public class DeferredUnmarshalTest extends TestCase {
 	

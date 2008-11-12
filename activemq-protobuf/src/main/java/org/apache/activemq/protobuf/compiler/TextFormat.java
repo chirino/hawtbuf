@@ -16,20 +16,13 @@
 
 package org.apache.activemq.protobuf.compiler;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Descriptors.Descriptor;
-import com.google.protobuf.Descriptors.FieldDescriptor;
-import com.google.protobuf.Descriptors.EnumDescriptor;
-import com.google.protobuf.Descriptors.EnumValueDescriptor;
-
 import java.io.IOException;
-import java.nio.CharBuffer;
 import java.math.BigInteger;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.nio.CharBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.activemq.protobuf.ByteString;
 
 /** 
  * Provide ascii text parsing and formatting support for proto2 instances.

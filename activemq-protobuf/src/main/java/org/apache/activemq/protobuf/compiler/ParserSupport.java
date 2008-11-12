@@ -19,7 +19,6 @@ package org.apache.activemq.protobuf.compiler;
 import org.apache.activemq.protobuf.compiler.TextFormat.InvalidEscapeSequence;
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
 import org.apache.activemq.protobuf.compiler.parser.Token;
-import com.google.protobuf.ByteString;
 
 public class ParserSupport {
 

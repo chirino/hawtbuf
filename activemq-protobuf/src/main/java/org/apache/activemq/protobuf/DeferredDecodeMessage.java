@@ -18,9 +18,6 @@ package org.apache.activemq.protobuf;
 
 import java.io.IOException;
 
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
-
 abstract public class DeferredDecodeMessage<T> extends BaseMessage<T> {
 
     protected byte[] encodedForm;

@@ -16,10 +16,10 @@
  */
 package org.apache.activemq.protobuf;
 
-import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_END_GROUP;
-import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_LENGTH_DELIMITED;
-import static org.apache.activemq.protobuf.WireInfo.WIRETYPE_START_GROUP;
-import static org.apache.activemq.protobuf.WireInfo.makeTag;
+import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_END_GROUP;
+import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED;
+import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_START_GROUP;
+import static org.apache.activemq.protobuf.WireFormat.makeTag;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,11 +27,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 abstract public class BaseMessage<T> implements Message<T> {
 
@@ -84,7 +79,7 @@ abstract public class BaseMessage<T> implements Message<T> {
     }
     
 	
-     public void writeUnframed(com.google.protobuf.CodedOutputStream output) throws java.io.IOException {
+     public void writeUnframed(CodedOutputStream output) throws java.io.IOException {
 //        if (encodedForm == null) {
 //           encodedForm = new byte[serializedSizeUnframed()];
 //           com.google.protobuf.CodedOutputStream original = output;

@@ -20,11 +20,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
-
 public interface Message<T> {
 
     public T clone() throws CloneNotSupportedException;
@@ -35,7 +30,7 @@ public interface Message<T> {
 
     public void clear();
 
-    public T assertInitialized() throws com.google.protobuf.UninitializedMessageException;
+    public T assertInitialized() throws UninitializedMessageException;
 
     public T mergeFrom(T other);
 
