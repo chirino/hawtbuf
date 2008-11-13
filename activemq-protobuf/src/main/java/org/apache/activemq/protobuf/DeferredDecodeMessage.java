@@ -56,7 +56,7 @@ abstract public class DeferredDecodeMessage<T> extends BaseMessage<T> {
                 encodedForm=null;
                 CodedInputStream input = CodedInputStream.newInstance(originalForm);
                 mergeUnframed(input);
-                input.checkLastTagWas(0);
+//                input.checkLastTagWas(0);
                 // We need to reset the encoded form because the mergeUnframed
                 // from a stream clears it out.
                 encodedForm = originalForm;

@@ -16,10 +16,10 @@
 
 package org.apache.activemq.protobuf;
 
+import java.io.EOFException;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Reads and decodes protocol message fields.
@@ -33,23 +33,23 @@ import java.util.List;
  * 
  * @author kenton@google.com Kenton Varda
  */
-public final class CodedInputStream {
+public final class CodedInputStream extends FilterInputStream {
+
+    private int lastTag = 0;
+    private int limit = Integer.MAX_VALUE;
+    private int pos;
     
-    /**
-     * Create a new CodedInputStream wrapping the given InputStream.
-     */
+    public CodedInputStream(InputStream in) {
+        super(in);
+    }
+
     public static CodedInputStream newInstance(InputStream input) {
-        return new CodedInputStream(input);
+        return new CodedInputStream( input );
     }
 
-    /**
-     * Create a new CodedInputStream wrapping the given byte array.
-     */
-    public static CodedInputStream newInstance(byte[] buf) {
-        return new CodedInputStream(buf);
+    public static CodedInputStream newInstance(byte[] originalForm) {
+        return new CodedInputStream( new ByteArrayInputStream(originalForm) );
     }
-
-    // -----------------------------------------------------------------
 
     /**
      * Attempt to read a field tag, returning zero if we have reached EOF.
@@ -58,17 +58,16 @@ public final class CodedInputStream {
      * number.
      */
     public int readTag() throws IOException {
-        if (bufferPos == bufferSize && !refillBuffer(false)) {
-            lastTag = 0;
+        try {
+            lastTag = readRawVarint32();
+            if (lastTag == 0) {
+                // If we actually read zero, that's not a valid tag.
+                throw InvalidProtocolBufferException.invalidTag();
+            }
+            return lastTag;
+        } catch (EOFException e) {
             return 0;
         }
-
-        lastTag = readRawVarint32();
-        if (lastTag == 0) {
-            // If we actually read zero, that's not a valid tag.
-            throw InvalidProtocolBufferException.invalidTag();
-        }
-        return lastTag;
     }
 
     /**
@@ -173,31 +172,13 @@ public final class CodedInputStream {
     /** Read a {@code string} field value from the stream. */
     public String readString() throws IOException {
         int size = readRawVarint32();
-        if (size < bufferSize - bufferPos && size > 0) {
-            // Fast path: We already have the bytes in a contiguous buffer, so
-            // just copy directly from it.
-            String result = new String(buffer, bufferPos, size, "UTF-8");
-            bufferPos += size;
-            return result;
-        } else {
-            // Slow path: Build a byte array first then copy it.
-            return new String(readRawBytes(size), "UTF-8");
-        }
+        return new String(readRawBytes(size), "UTF-8");
     }
 
     /** Read a {@code bytes} field value from the stream. */
     public ByteString readBytes() throws IOException {
         int size = readRawVarint32();
-        if (size < bufferSize - bufferPos && size > 0) {
-            // Fast path: We already have the bytes in a contiguous buffer, so
-            // just copy directly from it.
-            ByteString result = ByteString.copyFrom(buffer, bufferPos, size);
-            bufferPos += size;
-            return result;
-        } else {
-            // Slow path: Build a byte array first then copy it.
-            return ByteString.copyFrom(readRawBytes(size));
-        }
+        return ByteString.copyFrom(readRawBytes(size));
     }
 
     /** Read a {@code uint32} field value from the stream. */
@@ -336,172 +317,7 @@ public final class CodedInputStream {
      */
     public static long decodeZigZag64(long n) {
         return (n >>> 1) ^ -(n & 1);
-    }
-
-    // -----------------------------------------------------------------
-
-    private byte[] buffer;
-    private int bufferSize;
-    private int bufferSizeAfterLimit = 0;
-    private int bufferPos = 0;
-    private InputStream input;
-    private int lastTag = 0;
-
-    /**
-     * The total number of bytes read before the current buffer. The total bytes
-     * read up to the current position can be computed as {@code
-     * totalBytesRetired + bufferPos}.
-     */
-    private int totalBytesRetired = 0;
-
-    /** The absolute position of the end of the current message. */
-    private int currentLimit = Integer.MAX_VALUE;
-
-    /** See setRecursionLimit() */
-    private int recursionDepth = 0;
-    private int recursionLimit = DEFAULT_RECURSION_LIMIT;
-
-    /** See setSizeLimit() */
-    private int sizeLimit = DEFAULT_SIZE_LIMIT;
-
-    private static final int DEFAULT_RECURSION_LIMIT = 64;
-    private static final int DEFAULT_SIZE_LIMIT = 64 << 20; // 64MB
-    private static final int BUFFER_SIZE = 4096;
-
-    private CodedInputStream(byte[] buffer) {
-        this.buffer = buffer;
-        this.bufferSize = buffer.length;
-        this.input = null;
-    }
-
-    private CodedInputStream(InputStream input) {
-        this.buffer = new byte[BUFFER_SIZE];
-        this.bufferSize = 0;
-        this.input = input;
-    }
-
-    /**
-     * Set the maximum message recursion depth. In order to prevent malicious
-     * messages from causing stack overflows, {@code CodedInputStream} limits
-     * how deeply messages may be nested. The default limit is 64.
-     * 
-     * @return the old limit.
-     */
-    public int setRecursionLimit(int limit) {
-        if (limit < 0) {
-            throw new IllegalArgumentException("Recursion limit cannot be negative: " + limit);
-        }
-        int oldLimit = recursionLimit;
-        recursionLimit = limit;
-        return oldLimit;
-    }
-
-    /**
-     * Set the maximum message size. In order to prevent malicious messages from
-     * exhausting memory or causing integer overflows, {@code CodedInputStream}
-     * limits how large a message may be. The default limit is 64MB. You should
-     * set this limit as small as you can without harming your app's
-     * functionality. Note that size limits only apply when reading from an
-     * {@code InputStream}, not when constructed around a raw byte array (nor
-     * with {@link ByteString#newCodedInput}).
-     * 
-     * @return the old limit.
-     */
-    public int setSizeLimit(int limit) {
-        if (limit < 0) {
-            throw new IllegalArgumentException("Size limit cannot be negative: " + limit);
-        }
-        int oldLimit = sizeLimit;
-        sizeLimit = limit;
-        return oldLimit;
-    }
-
-    /**
-     * Sets {@code currentLimit} to (current position) + {@code byteLimit}. This
-     * is called when descending into a length-delimited embedded message.
-     * 
-     * @return the old limit.
-     */
-    public int pushLimit(int byteLimit) throws InvalidProtocolBufferException {
-        if (byteLimit < 0) {
-            throw InvalidProtocolBufferException.negativeSize();
-        }
-        byteLimit += totalBytesRetired + bufferPos;
-        int oldLimit = currentLimit;
-        if (byteLimit > oldLimit) {
-            throw InvalidProtocolBufferException.truncatedMessage();
-        }
-        currentLimit = byteLimit;
-
-        recomputeBufferSizeAfterLimit();
-
-        return oldLimit;
-    }
-
-    private void recomputeBufferSizeAfterLimit() {
-        bufferSize += bufferSizeAfterLimit;
-        int bufferEnd = totalBytesRetired + bufferSize;
-        if (bufferEnd > currentLimit) {
-            // Limit is in current buffer.
-            bufferSizeAfterLimit = bufferEnd - currentLimit;
-            bufferSize -= bufferSizeAfterLimit;
-        } else {
-            bufferSizeAfterLimit = 0;
-        }
-    }
-
-    /**
-     * Discards the current limit, returning to the previous limit.
-     * 
-     * @param oldLimit
-     *            The old limit, as returned by {@code pushLimit}.
-     */
-    public void popLimit(int oldLimit) {
-        currentLimit = oldLimit;
-        recomputeBufferSizeAfterLimit();
-    }
-
-    /**
-     * Called with {@code this.buffer} is empty to read more bytes from the
-     * input. If {@code mustSucceed} is true, refillBuffer() gurantees that
-     * either there will be at least one byte in the buffer when it returns or
-     * it will throw an exception. If {@code mustSucceed} is false,
-     * refillBuffer() returns false if no more bytes were available.
-     */
-    private boolean refillBuffer(boolean mustSucceed) throws IOException {
-        if (bufferPos < bufferSize) {
-            throw new IllegalStateException("refillBuffer() called when buffer wasn't empty.");
-        }
-
-        if (totalBytesRetired + bufferSize == currentLimit) {
-            // Oops, we hit a limit.
-            if (mustSucceed) {
-                throw InvalidProtocolBufferException.truncatedMessage();
-            } else {
-                return false;
-            }
-        }
-
-        totalBytesRetired += bufferSize;
-
-        bufferPos = 0;
-        bufferSize = (input == null) ? -1 : input.read(buffer);
-        if (bufferSize == -1) {
-            bufferSize = 0;
-            if (mustSucceed) {
-                throw InvalidProtocolBufferException.truncatedMessage();
-            } else {
-                return false;
-            }
-        } else {
-            recomputeBufferSizeAfterLimit();
-            int totalBytesRead = totalBytesRetired + bufferSize + bufferSizeAfterLimit;
-            if (totalBytesRead > sizeLimit || totalBytesRead < 0) {
-                throw InvalidProtocolBufferException.sizeLimitExceeded();
-            }
-            return true;
-        }
-    }
+    }   
 
     /**
      * Read one byte from the input.
@@ -510,10 +326,15 @@ public final class CodedInputStream {
      *             The end of the stream or the current limit was reached.
      */
     public byte readRawByte() throws IOException {
-        if (bufferPos == bufferSize) {
-            refillBuffer(true);
+        if( pos >= limit ) {
+            throw new EOFException();
         }
-        return buffer[bufferPos++];
+        int rc = in.read();
+        if( rc < 0 ) {
+            throw new EOFException();
+        }
+        pos++;
+        return (byte)( rc & 0xFF); 
     }
 
     /**
@@ -523,114 +344,22 @@ public final class CodedInputStream {
      *             The end of the stream or the current limit was reached.
      */
     public byte[] readRawBytes(int size) throws IOException {
-        if (size < 0) {
-            throw InvalidProtocolBufferException.negativeSize();
+        if( this.pos+size > limit ) {
+            throw new EOFException();
         }
-
-        if (totalBytesRetired + bufferPos + size > currentLimit) {
-            // Read to the end of the stream anyway.
-            skipRawBytes(currentLimit - totalBytesRetired - bufferPos);
-            // Then fail.
-            throw InvalidProtocolBufferException.truncatedMessage();
+        byte[] rc = new byte[size];
+        int c;
+        int pos=0;
+        
+        while( pos < size ) {
+            c = in.read(rc, pos, size-pos);
+            if( c < 0 ) {
+                throw new EOFException();
+            }
+            this.pos += c;
+            pos += c;
         }
-
-        if (size <= bufferSize - bufferPos) {
-            // We have all the bytes we need already.
-            byte[] bytes = new byte[size];
-            System.arraycopy(buffer, bufferPos, bytes, 0, size);
-            bufferPos += size;
-            return bytes;
-        } else if (size < BUFFER_SIZE) {
-            // Reading more bytes than are in the buffer, but not an excessive
-            // number
-            // of bytes. We can safely allocate the resulting array ahead of
-            // time.
-
-            // First copy what we have.
-            byte[] bytes = new byte[size];
-            int pos = bufferSize - bufferPos;
-            System.arraycopy(buffer, bufferPos, bytes, 0, pos);
-            bufferPos = bufferSize;
-
-            // We want to use refillBuffer() and then copy from the buffer into
-            // our
-            // byte array rather than reading directly into our byte array
-            // because
-            // the input may be unbuffered.
-            refillBuffer(true);
-
-            while (size - pos > bufferSize) {
-                System.arraycopy(buffer, 0, bytes, pos, bufferSize);
-                pos += bufferSize;
-                bufferPos = bufferSize;
-                refillBuffer(true);
-            }
-
-            System.arraycopy(buffer, 0, bytes, pos, size - pos);
-            bufferPos = size - pos;
-
-            return bytes;
-        } else {
-            // The size is very large. For security reasons, we can't allocate
-            // the
-            // entire byte array yet. The size comes directly from the input, so
-            // a
-            // maliciously-crafted message could provide a bogus very large size
-            // in
-            // order to trick the app into allocating a lot of memory. We avoid
-            // this
-            // by allocating and reading only a small chunk at a time, so that
-            // the
-            // malicious message must actually *be* extremely large to cause
-            // problems. Meanwhile, we limit the allowed size of a message
-            // elsewhere.
-
-            // Remember the buffer markers since we'll have to copy the bytes
-            // out of
-            // it later.
-            int originalBufferPos = bufferPos;
-            int originalBufferSize = bufferSize;
-
-            // Mark the current buffer consumed.
-            totalBytesRetired += bufferSize;
-            bufferPos = 0;
-            bufferSize = 0;
-
-            // Read all the rest of the bytes we need.
-            int sizeLeft = size - (originalBufferSize - originalBufferPos);
-            List<byte[]> chunks = new ArrayList<byte[]>();
-
-            while (sizeLeft > 0) {
-                byte[] chunk = new byte[Math.min(sizeLeft, BUFFER_SIZE)];
-                int pos = 0;
-                while (pos < chunk.length) {
-                    int n = (input == null) ? -1 : input.read(chunk, pos, chunk.length - pos);
-                    if (n == -1) {
-                        throw InvalidProtocolBufferException.truncatedMessage();
-                    }
-                    totalBytesRetired += n;
-                    pos += n;
-                }
-                sizeLeft -= chunk.length;
-                chunks.add(chunk);
-            }
-
-            // OK, got everything. Now concatenate it all into one buffer.
-            byte[] bytes = new byte[size];
-
-            // Start by copying the leftover bytes from this.buffer.
-            int pos = originalBufferSize - originalBufferPos;
-            System.arraycopy(buffer, originalBufferPos, bytes, 0, pos);
-
-            // And now all the chunks.
-            for (byte[] chunk : chunks) {
-                System.arraycopy(chunk, 0, bytes, pos, chunk.length);
-                pos += chunk.length;
-            }
-
-            // Done.
-            return bytes;
-        }
+        return rc;
     }
 
     /**
@@ -640,37 +369,21 @@ public final class CodedInputStream {
      *             The end of the stream or the current limit was reached.
      */
     public void skipRawBytes(int size) throws IOException {
-        if (size < 0) {
-            throw InvalidProtocolBufferException.negativeSize();
-        }
-
-        if (totalBytesRetired + bufferPos + size > currentLimit) {
-            // Read to the end of the stream anyway.
-            skipRawBytes(currentLimit - totalBytesRetired - bufferPos);
-            // Then fail.
-            throw InvalidProtocolBufferException.truncatedMessage();
-        }
-
-        if (size < bufferSize - bufferPos) {
-            // We have all the bytes we need already.
-            bufferPos += size;
-        } else {
-            // Skipping more bytes than are in the buffer. First skip what we
-            // have.
-            int pos = bufferSize - bufferPos;
-            totalBytesRetired += pos;
-            bufferPos = 0;
-            bufferSize = 0;
-
-            // Then skip directly from the InputStream for the rest.
-            while (pos < size) {
-                int n = (input == null) ? -1 : (int) input.skip(size - pos);
-                if (n <= 0) {
-                    throw InvalidProtocolBufferException.truncatedMessage();
-                }
-                pos += n;
-                totalBytesRetired += n;
-            }
+        int pos = 0;
+        while (pos < size) {
+            int n = (int) in.skip(size - pos);
+            pos += n;
         }
     }
+
+    public int pushLimit(int limit) {
+        int rc = this.limit;
+        this.limit = pos+limit;
+        return rc;
+    }
+
+    public void popLimit(int limit) {
+        this.limit = limit;
+    }
+  
 }
