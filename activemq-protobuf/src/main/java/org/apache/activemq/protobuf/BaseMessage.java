@@ -48,7 +48,7 @@ abstract public class BaseMessage<T> implements Message<T> {
         if (!missingFields.isEmpty()) {
             throw new UninitializedMessageException(missingFields);
         }
-        return (T) this;
+        return getThis();
     }
 
     @SuppressWarnings("unchecked")
@@ -57,7 +57,7 @@ abstract public class BaseMessage<T> implements Message<T> {
         if (!missingFields.isEmpty()) {
             throw new UninitializedMessageException(missingFields).asInvalidProtocolBufferException();
         }
-        return (T) this;
+        return getThis();
     }
 
     public ArrayList<String> missingFields() {
@@ -74,7 +74,7 @@ abstract public class BaseMessage<T> implements Message<T> {
 
     @SuppressWarnings("unchecked")
     public T mergeFrom(T other) {
-        return (T) this;
+        return getThis();
     }
 
     public void writeUnframed(CodedOutputStream output) throws java.io.IOException {
@@ -107,38 +107,54 @@ abstract public class BaseMessage<T> implements Message<T> {
         writeUnframed(output);
     }
 
-    public byte[] toUnframedByteArray() {
+    public Buffer toUnframedBuffer() {
         try {
-            byte[] result = new byte[serializedSizeUnframed()];
-            CodedOutputStream output = CodedOutputStream.newInstance(result);
+            int size = serializedSizeUnframed();
+            BufferOutputStream baos = new BufferOutputStream(size);
+            CodedOutputStream output = new CodedOutputStream(baos);
             writeUnframed(output);
-            output.checkNoSpaceLeft();
-            return result;
+            Buffer rc = baos.toBuffer();
+            if( rc.length != size ) {
+                throw new IllegalStateException("Did not write as much data as expected.");
+            }
+            return rc;
         } catch (IOException e) {
             throw new RuntimeException("Serializing to a byte array threw an IOException " + "(should never happen).", e);
         }
+    }
+
+    public Buffer toFramedBuffer() {
+        try {
+            int size = serializedSizeFramed();
+            BufferOutputStream baos = new BufferOutputStream(size);
+            CodedOutputStream output = new CodedOutputStream(baos);
+            writeFramed(output);
+            Buffer rc = baos.toBuffer();
+            if( rc.length != size ) {
+                throw new IllegalStateException("Did not write as much data as expected.");
+            }
+            return rc;
+        } catch (IOException e) {
+            throw new RuntimeException("Serializing to a byte array threw an IOException " + "(should never happen).", e);
+        }
+    }
+
+    public byte[] toUnframedByteArray() {
+        return toUnframedBuffer().toByteArray();
     }
 
     public byte[] toFramedByteArray() {
-        try {
-            byte[] result = new byte[serializedSizeFramed()];
-            CodedOutputStream output = CodedOutputStream.newInstance(result);
-            writeFramed(output);
-            output.checkNoSpaceLeft();
-            return result;
-        } catch (IOException e) {
-            throw new RuntimeException("Serializing to a byte array threw an IOException " + "(should never happen).", e);
-        }
+        return toFramedBuffer().toByteArray();
     }
 
     public void writeFramed(OutputStream output) throws IOException {
-        CodedOutputStream codedOutput = CodedOutputStream.newInstance(output);
+        CodedOutputStream codedOutput = new CodedOutputStream(output);
         writeFramed(codedOutput);
         codedOutput.flush();
     }
 
     public void writeUnframed(OutputStream output) throws IOException {
-        CodedOutputStream codedOutput = CodedOutputStream.newInstance(output);
+        CodedOutputStream codedOutput = new CodedOutputStream(output);
         writeUnframed(codedOutput);
         codedOutput.flush();
     }
@@ -157,67 +173,54 @@ abstract public class BaseMessage<T> implements Message<T> {
         int length = input.readRawVarint32();
         int oldLimit = input.pushLimit(length);
         T rc = mergeUnframed(input);
-        // input.checkLastTagWas(0);
+        input.checkLastTagWas(0);
         input.popLimit(oldLimit);
         return rc;
     }
 
-    public T mergeUnframed(ByteString data) throws InvalidProtocolBufferException {
+    public T mergeUnframed(Buffer data) throws InvalidProtocolBufferException {
         try {
-            CodedInputStream input = data.newCodedInput();
+            CodedInputStream input = new CodedInputStream(data);
             mergeUnframed(input);
-            // input.checkLastTagWas(0);
-            return (T) this;
+            input.checkLastTagWas(0);
+            return getThis();
         } catch (InvalidProtocolBufferException e) {
             throw e;
         } catch (IOException e) {
-            throw new RuntimeException("Reading from a ByteString threw an IOException (should " + "never happen).", e);
+            throw new RuntimeException("An IOException was thrown (should never happen in this method).", e);
         }
     }
 
-    public T mergeFramed(ByteString data) throws InvalidProtocolBufferException {
+    @SuppressWarnings("unchecked")
+    private T getThis() {
+        return (T) this;
+    }
+
+    public T mergeFramed(Buffer data) throws InvalidProtocolBufferException {
         try {
-            CodedInputStream input = data.newCodedInput();
+            CodedInputStream input = new CodedInputStream(data);
             mergeFramed(input);
-            // input.checkLastTagWas(0);
-            return (T) this;
+            input.checkLastTagWas(0);
+            return getThis();
         } catch (InvalidProtocolBufferException e) {
             throw e;
         } catch (IOException e) {
-            throw new RuntimeException("Reading from a ByteString threw an IOException (should " + "never happen).", e);
+            throw new RuntimeException("An IOException was thrown (should never happen in this method).", e);
         }
     }
 
     public T mergeUnframed(byte[] data) throws InvalidProtocolBufferException {
-        try {
-            CodedInputStream input = CodedInputStream.newInstance(data);
-            mergeUnframed(input);
-            // input.checkLastTagWas(0);
-            return (T) this;
-        } catch (InvalidProtocolBufferException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new RuntimeException("Reading from a byte array threw an IOException (should " + "never happen).", e);
-        }
+        return mergeUnframed(new Buffer(data));
     }
 
     public T mergeFramed(byte[] data) throws InvalidProtocolBufferException {
-        try {
-            CodedInputStream input = CodedInputStream.newInstance(data);
-            mergeFramed(input);
-            // input.checkLastTagWas(0);
-            return (T) this;
-        } catch (InvalidProtocolBufferException e) {
-            throw e;
-        } catch (IOException e) {
-            throw new RuntimeException("Reading from a byte array threw an IOException (should " + "never happen).", e);
-        }
+        return mergeFramed(new Buffer(data));
     }
 
     public T mergeUnframed(InputStream input) throws IOException {
-        CodedInputStream codedInput = CodedInputStream.newInstance(input);
+        CodedInputStream codedInput = new CodedInputStream(input);
         mergeUnframed(codedInput);
-        return (T) this;
+        return getThis();
     }
 
     public T mergeFramed(InputStream input) throws IOException {

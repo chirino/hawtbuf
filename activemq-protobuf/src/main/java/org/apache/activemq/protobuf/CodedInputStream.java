@@ -38,17 +38,21 @@ public final class CodedInputStream extends FilterInputStream {
     private int lastTag = 0;
     private int limit = Integer.MAX_VALUE;
     private int pos;
+    private BufferInputStream bis;
     
     public CodedInputStream(InputStream in) {
         super(in);
+        if( in.getClass() == BufferInputStream.class ) {
+            bis = (BufferInputStream)in;
+        }
     }
 
-    public static CodedInputStream newInstance(InputStream input) {
-        return new CodedInputStream( input );
+    public CodedInputStream(Buffer data) {
+        this(new BufferInputStream(data));
     }
 
-    public static CodedInputStream newInstance(byte[] originalForm) {
-        return new CodedInputStream( new ByteArrayInputStream(originalForm) );
+    public CodedInputStream(byte[] data) {
+        this(new BufferInputStream(data));
     }
 
     /**
@@ -66,6 +70,7 @@ public final class CodedInputStream extends FilterInputStream {
             }
             return lastTag;
         } catch (EOFException e) {
+            lastTag=0;
             return 0;
         }
     }
@@ -172,13 +177,14 @@ public final class CodedInputStream extends FilterInputStream {
     /** Read a {@code string} field value from the stream. */
     public String readString() throws IOException {
         int size = readRawVarint32();
-        return new String(readRawBytes(size), "UTF-8");
+        Buffer data = readRawBytes(size);
+        return new String(data.data, data.offset, data.length, "UTF-8");
     }
 
     /** Read a {@code bytes} field value from the stream. */
-    public ByteString readBytes() throws IOException {
+    public Buffer readBytes() throws IOException {
         int size = readRawVarint32();
-        return ByteString.copyFrom(readRawBytes(size));
+        return readRawBytes(size);
     }
 
     /** Read a {@code uint32} field value from the stream. */
@@ -343,14 +349,26 @@ public final class CodedInputStream extends FilterInputStream {
      * @throws InvalidProtocolBufferException
      *             The end of the stream or the current limit was reached.
      */
-    public byte[] readRawBytes(int size) throws IOException {
+    public Buffer readRawBytes(int size) throws IOException {
         if( this.pos+size > limit ) {
             throw new EOFException();
         }
+        
+        // If the underlying stream is a ByteArrayInputStream
+        // then we can avoid an array copy.
+        if( bis!=null ) {
+            Buffer rc = bis.readBuffer(size);
+            if( rc==null || rc.getLength() < size ) {
+                throw new EOFException();
+            }
+            this.pos += rc.getLength();
+            return rc;
+        }
+
+        // Otherwise we, have to do it the old fasioned way
         byte[] rc = new byte[size];
         int c;
         int pos=0;
-        
         while( pos < size ) {
             c = in.read(rc, pos, size-pos);
             if( c < 0 ) {
@@ -359,7 +377,8 @@ public final class CodedInputStream extends FilterInputStream {
             this.pos += c;
             pos += c;
         }
-        return rc;
+        
+        return new Buffer(rc);
     }
 
     /**

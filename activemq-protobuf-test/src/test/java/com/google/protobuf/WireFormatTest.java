@@ -18,7 +18,7 @@ package com.google.protobuf;
 
 import junit.framework.TestCase;
 
-import org.apache.activemq.protobuf.ByteString;
+import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.CodedInputStream;
 
 import protobuf_unittest.UnittestProto.TestAllTypes;
@@ -40,8 +40,8 @@ public class WireFormatTest extends TestCase {
     TestUtil.assertAllFieldsSet(message2);
   }
 
-  private void assertFieldsInOrder(ByteString data) throws Exception {
-    CodedInputStream input = data.newCodedInput();
+  private void assertFieldsInOrder(Buffer data) throws Exception {
+    CodedInputStream input = new CodedInputStream(data);
     int previousTag = 0;
 
     while (true) {

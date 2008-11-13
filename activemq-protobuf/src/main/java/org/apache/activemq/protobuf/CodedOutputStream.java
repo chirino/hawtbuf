@@ -37,18 +37,22 @@ import java.io.OutputStream;
  */
 public final class CodedOutputStream extends FilterOutputStream {
 
-    public static CodedOutputStream newInstance(byte[] data) {
-        return new CodedOutputStream(new ByteArrayOutputStream(data));
-    }
-
-    public static CodedOutputStream newInstance(OutputStream output) {
-        return new CodedOutputStream(output);
-    }
+    private BufferOutputStream bos;
 
     public CodedOutputStream(OutputStream os) {
         super(os);
+        if( os instanceof BufferOutputStream ) {
+            bos = (BufferOutputStream)os;
+        }
     }
     
+    public CodedOutputStream(byte[] data) {
+        super(new BufferOutputStream(data));
+    }
+    
+    public CodedOutputStream(Buffer data) {
+        super(new BufferOutputStream(data));
+    }
 
     // -----------------------------------------------------------------
 
@@ -119,11 +123,10 @@ public final class CodedOutputStream extends FilterOutputStream {
     }
 
     /** Write a {@code bytes} field, including tag, to the stream. */
-    public void writeBytes(int fieldNumber, ByteString value) throws IOException {
+    public void writeBytes(int fieldNumber, Buffer value) throws IOException {
         writeTag(fieldNumber, WireFormat.WIRETYPE_LENGTH_DELIMITED);
-        byte[] bytes = value.toByteArray();
-        writeRawVarint32(bytes.length);
-        writeRawBytes(bytes);
+        writeRawVarint32(value.length);
+        writeRawBytes(value.data, value.offset, value.length);
     }
 
     /** Write a {@code uint32} field, including tag, to the stream. */
@@ -253,8 +256,8 @@ public final class CodedOutputStream extends FilterOutputStream {
      * Compute the number of bytes that would be needed to encode a {@code
      * bytes} field, including tag.
      */
-    public static int computeBytesSize(int fieldNumber, ByteString value) {
-        return computeTagSize(fieldNumber) + computeRawVarint32Size(value.size()) + value.size();
+    public static int computeBytesSize(int fieldNumber, Buffer value) {
+        return computeTagSize(fieldNumber) + computeRawVarint32Size(value.length) + value.length;
     }
 
     /**
@@ -324,6 +327,10 @@ public final class CodedOutputStream extends FilterOutputStream {
     /** Write part of an array of bytes. */
     public void writeRawBytes(byte[] value, int offset, int length) throws IOException {
         out.write(value, offset, length);
+    }
+
+    public void writeRawBytes(Buffer data) throws IOException {
+        out.write(data.data, data.offset, data.length);
     }
 
     /** Encode and write a tag. */
@@ -462,6 +469,13 @@ public final class CodedOutputStream extends FilterOutputStream {
     }
 
     public void checkNoSpaceLeft() {
+    }
+
+    public Buffer getNextBuffer(int size) throws IOException {
+        if( bos==null ) {
+            return null;
+        }
+        return bos.getNextBuffer(size);
     }
 
 }

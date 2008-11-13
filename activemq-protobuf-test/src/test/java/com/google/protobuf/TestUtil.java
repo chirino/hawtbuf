@@ -28,7 +28,7 @@ import java.io.RandomAccessFile;
 
 import junit.framework.Assert;
 
-import org.apache.activemq.protobuf.ByteString;
+import org.apache.activemq.protobuf.Buffer;
 
 import protobuf_unittest.UnittestProto.ForeignEnum;
 import protobuf_unittest.UnittestProto.ForeignMessage;
@@ -49,10 +49,10 @@ import com.google.protobuf.test.UnittestImport.ImportMessage;
 class TestUtil {
   private TestUtil() {}
 
-  /** Helper to convert a String to ByteString. */
-  private static ByteString toBytes(String str) {
+  /** Helper to convert a String to ByteSequence. */
+  private static Buffer toBytes(String str) {
     try {
-      return ByteString.copyFrom(str.getBytes("UTF-8"));
+      return new Buffer(str.getBytes("UTF-8"));
     } catch(java.io.UnsupportedEncodingException e) {
       throw new RuntimeException("UTF-8 not supported.", e);
     }
@@ -710,7 +710,7 @@ class TestUtil {
   private static void assertEqualsExactType(String a, String b) {
     Assert.assertEquals(a, b);
   }
-  private static void assertEqualsExactType(ByteString a, ByteString b) {
+  private static void assertEqualsExactType(Buffer a, Buffer b) {
     Assert.assertEquals(a, b);
   }
   private static void assertEqualsExactType(TestAllTypes.NestedEnum a,
@@ -758,13 +758,13 @@ class TestUtil {
    * @param filePath The path relative to
    * {@link com.google.testing.util.TestUtil#getDefaultSrcDir}.
    */
-  public static ByteString readBytesFromFile(String filename) {
+  public static Buffer readBytesFromFile(String filename) {
     File fullPath = new File(getTestDataDir(), filename);
     try {
       RandomAccessFile file = new RandomAccessFile(fullPath, "r");
       byte[] content = new byte[(int) file.length()];
       file.readFully(content);
-      return ByteString.copyFrom(content);
+      return new Buffer(content);
     } catch (IOException e) {
       // Throw a RuntimeException here so that we can call this function from
       // static initializers.
@@ -780,11 +780,11 @@ class TestUtil {
    * on disk rather than generated dynamically.  The file is actually generated
    * by C++ code, so testing against it verifies compatibility with C++.
    */
-  public static ByteString getGoldenMessage() {
+  public static Buffer getGoldenMessage() {
     if (goldenMessage == null) {
       goldenMessage = readBytesFromFile("golden_message");
     }
     return goldenMessage;
   }
-  private static ByteString goldenMessage = null;
+  private static Buffer goldenMessage = null;
 }

@@ -39,19 +39,22 @@ public interface Message<T> {
     
     public T mergeFramed(byte[] data) throws InvalidProtocolBufferException;
 
-    public T mergeUnframed(CodedInputStream input) throws IOException;
-    
-    public T mergeFramed(CodedInputStream input) throws IOException;
-    
-    public T mergeUnframed(ByteString data) throws InvalidProtocolBufferException;
+    public T mergeUnframed(Buffer buffer) throws InvalidProtocolBufferException;
 
-    public T mergeFramed(ByteString data) throws InvalidProtocolBufferException;
-    
+    public T mergeFramed(Buffer buffer) throws InvalidProtocolBufferException;
+
     public T mergeUnframed(InputStream input) throws IOException;
     
     public T mergeFramed(InputStream input) throws IOException;
 
+    public T mergeUnframed(CodedInputStream input) throws IOException;
     
+    public T mergeFramed(CodedInputStream input) throws IOException;
+    
+
+    public Buffer toUnframedBuffer();
+    
+    public Buffer toFramedBuffer();
 
     public byte[] toUnframedByteArray();
    

@@ -20,7 +20,7 @@ import java.io.IOException;
 
 abstract public class DeferredDecodeMessage<T> extends BaseMessage<T> {
 
-    protected byte[] encodedForm;
+    protected Buffer encodedForm;
     protected boolean decoded = true;
 
     @Override
@@ -34,29 +34,29 @@ abstract public class DeferredDecodeMessage<T> extends BaseMessage<T> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public T mergeUnframed(byte[] data) throws InvalidProtocolBufferException {
+    public T mergeUnframed(Buffer data) throws InvalidProtocolBufferException {
         encodedForm = data;
         decoded = false;
         return (T) this;
     }
 
     @Override
-    public byte[] toUnframedByteArray() {
+    public Buffer toUnframedBuffer() {
         if (encodedForm == null) {
-            encodedForm = super.toUnframedByteArray();
+            encodedForm = super.toUnframedBuffer();
         }
         return encodedForm;
     }
-
+    
     protected void load() {
         if (!decoded) {
             decoded = true;
             try {
-                byte[] originalForm = encodedForm;
+                Buffer originalForm = encodedForm;
                 encodedForm=null;
-                CodedInputStream input = CodedInputStream.newInstance(originalForm);
+                CodedInputStream input = new CodedInputStream(originalForm);
                 mergeUnframed(input);
-//                input.checkLastTagWas(0);
+                input.checkLastTagWas(0);
                 // We need to reset the encoded form because the mergeUnframed
                 // from a stream clears it out.
                 encodedForm = originalForm;
@@ -70,9 +70,6 @@ abstract public class DeferredDecodeMessage<T> extends BaseMessage<T> {
     protected void loadAndClear() {
         super.loadAndClear();
         load();
-//        if( encodedForm!=null ) {
-//            System.out.println("crap.");
-//        }
         encodedForm = null;
     }
 

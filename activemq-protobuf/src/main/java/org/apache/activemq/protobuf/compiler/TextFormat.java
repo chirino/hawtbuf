@@ -22,7 +22,7 @@ import java.nio.CharBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.activemq.protobuf.ByteString;
+import org.apache.activemq.protobuf.Buffer;
 
 /** 
  * Provide ascii text parsing and formatting support for proto2 instances.
@@ -370,15 +370,15 @@ public final class TextFormat {
      * value.  Otherwise, throw a {@link ParseException}.
      */
     public String consumeString() throws ParseException {
-      return consumeByteString().toStringUtf8();
+      return consumeBuffer().toStringUtf8();
     }
 
     /**
      * If the next token is a string, consume it, unescape it as a
-     * {@link ByteString}, and return it.  Otherwise, throw a
+     * {@link Buffer}, and return it.  Otherwise, throw a
      * {@link ParseException}.
      */
-    public ByteString consumeByteString() throws ParseException {
+    public Buffer consumeBuffer() throws ParseException {
       char quote = currentToken.length() > 0 ? currentToken.charAt(0) : '\0';
       if (quote != '\"' && quote != '\'') {
         throw parseException("Expected string.");
@@ -391,7 +391,7 @@ public final class TextFormat {
 
       try {
         String escaped = currentToken.substring(1, currentToken.length() - 1);
-        ByteString result = unescapeBytes(escaped);
+        Buffer result = unescapeBytes(escaped);
         nextToken();
         return result;
       } catch (InvalidEscapeSequence e) {
@@ -477,9 +477,9 @@ public final class TextFormat {
    * which no defined short-hand escape sequence is defined will be escaped
    * using 3-digit octal sequences.
    */
-  static String escapeBytes(ByteString input) {
-    StringBuilder builder = new StringBuilder(input.size());
-    for (int i = 0; i < input.size(); i++) {
+  static String escapeBytes(Buffer input) {
+    StringBuilder builder = new StringBuilder(input.getLength());
+    for (int i = 0; i < input.getLength(); i++) {
       byte b = input.byteAt(i);
       switch (b) {
         // Java does not recognize \a or \v, apparently.
@@ -510,10 +510,10 @@ public final class TextFormat {
 
   /**
    * Un-escape a byte sequence as escaped using
-   * {@link #escapeBytes(ByteString)}.  Two-digit hex escapes (starting with
+   * {@link #escapeBytes(Buffer)}.  Two-digit hex escapes (starting with
    * "\x") are also recognized.
    */
-  static ByteString unescapeBytes(CharSequence input)
+  static Buffer unescapeBytes(CharSequence input)
       throws InvalidEscapeSequence {
     byte[] result = new byte[input.length()];
     int pos = 0;
@@ -579,7 +579,7 @@ public final class TextFormat {
       }
     }
 
-    return ByteString.copyFrom(result, 0, pos);
+    return new Buffer(result, 0, pos);
   }
 
   /**
@@ -593,12 +593,12 @@ public final class TextFormat {
   }
 
   /**
-   * Like {@link #escapeBytes(ByteString)}, but escapes a text string.
+   * Like {@link #escapeBytes(Buffer)}, but escapes a text string.
    * Non-ASCII characters are first encoded as UTF-8, then each byte is escaped
    * individually as a 3-digit octal escape.  Yes, it's weird.
    */
   static String escapeText(String input) {
-    return escapeBytes(ByteString.copyFromUtf8(input));
+    return escapeBytes(new Buffer(input));
   }
 
   /**
