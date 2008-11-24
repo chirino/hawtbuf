@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.activemq</groupId>
     <artifactId>activemq-parent</artifactId>
-    <version>5.1.0</version>
+    <version>5.2.0</version>
   </parent>
 
   <groupId>org.apache.activemq.protobuf</groupId>
@@ -41,5 +41,10 @@
     <module>activemq-protobuf-test</module>
   </modules>
 
-  
+  <scm>
+    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-protobuf/trunk</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-protobuf/trunk</developerConnection>
+    <url>http://svn.apache.org/viewvc/activemq/activemq-protobuf/trunk/</url>
+  </scm>
+
 </project>
