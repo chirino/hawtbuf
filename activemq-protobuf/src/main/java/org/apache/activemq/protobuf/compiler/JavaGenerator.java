@@ -699,7 +699,7 @@ public class JavaGenerator {
             p("org.apache.activemq.protobuf.CodedOutputStream original=null;");
             p("if( encodedForm == null ) {");
             indent();
-            p("encodedForm = new Buffer(new byte[size]);");
+            p("encodedForm = new org.apache.activemq.protobuf.Buffer(new byte[size]);");
             p("original = output;");
             p("output = new org.apache.activemq.protobuf.CodedOutputStream(encodedForm);");
             unindent();
