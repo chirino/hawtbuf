@@ -49,10 +49,12 @@ public final class CodedInputStream extends FilterInputStream {
 
     public CodedInputStream(Buffer data) {
         this(new BufferInputStream(data));
+        limit = data.length;
     }
 
     public CodedInputStream(byte[] data) {
         this(new BufferInputStream(data));
+        limit = data.length;
     }
 
     /**
@@ -62,6 +64,10 @@ public final class CodedInputStream extends FilterInputStream {
      * number.
      */
     public int readTag() throws IOException {
+        if( pos >= limit ) {
+            lastTag=0;
+            return 0;
+        }
         try {
             lastTag = readRawVarint32();
             if (lastTag == 0) {
@@ -75,6 +81,7 @@ public final class CodedInputStream extends FilterInputStream {
         }
     }
 
+    
     /**
      * Verifies that the last call to readTag() returned the given tag value.
      * This is used to verify that a nested group ended with the correct end
