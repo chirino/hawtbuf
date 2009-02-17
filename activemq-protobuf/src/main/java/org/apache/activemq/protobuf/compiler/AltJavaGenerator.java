@@ -19,7 +19,6 @@ package org.apache.activemq.protobuf.compiler;
 import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_FIXED32;
 import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_FIXED64;
 import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED;
-import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_START_GROUP;
 import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_VARINT;
 import static org.apache.activemq.protobuf.WireFormat.makeTag;
 
@@ -34,11 +33,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-import org.apache.activemq.protobuf.Buffer;
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
 import org.apache.activemq.protobuf.compiler.parser.ProtoParser;
 
-public class JavaGenerator {
+public class AltJavaGenerator {
 
     private File out = new File(".");
     private File[] path = new File[]{new File(".")};
@@ -50,12 +48,11 @@ public class JavaGenerator {
     private int indent;
     private ArrayList<String> errors = new ArrayList<String>();
     private boolean multipleFiles;
-	private boolean deferredDecode;
     private boolean auto_clear_optional_fields;
 
     public static void main(String[] args) {
         
-        JavaGenerator generator = new JavaGenerator();
+        AltJavaGenerator generator = new AltJavaGenerator();
         args = CommandLineSupport.setOptions(generator, args);
         
         if (args.length == 0) {
@@ -111,7 +108,7 @@ public class JavaGenerator {
         outerClassName = javaClassName(proto);
 //        optimizeFor = getOption(proto.getOptions(), "optimize_for", "SPEED");
         multipleFiles = isMultipleFilesEnabled(proto);
-		deferredDecode = Boolean.parseBoolean(getOption(proto.getOptions(), "deferred_decode", "false"));
+//		deferredDecode = Boolean.parseBoolean(getOption(proto.getOptions(), "deferred_decode", "false"));
         auto_clear_optional_fields = Boolean.parseBoolean(getOption(proto.getOptions(), "auto_clear_optional_fields", "false"));
 		
         if( multipleFiles ) {
@@ -242,31 +239,17 @@ public class JavaGenerator {
     private void generateMessageBean(MessageDescriptor m) {
         
         String className = uCamel(m.getName());
+        String beanClassName = className+"Bean";
+        String bufferClassName = className+"Buffer";
         p();
         
         String staticOption = "static ";
         if( multipleFiles && m.getParent()==null ) {
             staticOption="";
         }
-        
-        String javaImplements = getOption(m.getOptions(), "java_implments", null);
-        
-        String implementsExpression = "";
-        if( javaImplements!=null ) {
-            implementsExpression = "implements "+javaImplements+" ";
-        }
-        
-        String baseClass = "org.apache.activemq.protobuf.BaseMessage";
-        if( deferredDecode ) {
-            baseClass = "org.apache.activemq.protobuf.DeferredDecodeMessage";
-        }
-        if( m.getBaseType()!=null ) {
-            baseClass = javaType(m.getBaseType())+"Base";
-        }
-        
-        p(staticOption+"public final class " + className + " extends "+className+"Base<"+className+"> "+implementsExpression+"{");
+                
+        p(staticOption+"public interface " + className +" {");
         p();
-
         indent();
         
         for (EnumDescriptor enumType : m.getEnums().values()) {
@@ -280,68 +263,254 @@ public class JavaGenerator {
 
         // Generate the Group Messages
         for (FieldDescriptor field : m.getFields().values()) {
-        	if( isInBaseClass(m, field) ) {
-        		continue;
-        	}
             if( field.isGroup() ) {
                 generateMessageBean(field.getGroup());
             }
         }
+        
+        // Generate the field getters
+        for (FieldDescriptor field : m.getFields().values()) {
+            generateFieldGetterSignatures(field);
+        }
+        
+        p("public "+beanClassName+" copy();");
+        p("public "+bufferClassName+" freeze();");
+        p("public java.lang.StringBuilder toString(java.lang.StringBuilder sb, String prefix);");
 
         
-        generateMethodAssertInitialized(m, className);
+        p();
+        p("static public final class "+beanClassName+" implements "+className+" {");
+        p();
+        indent();
+        
+        p(""+bufferClassName+" frozen;");
+        p(""+beanClassName+" bean;");
+        p();
+        p("public "+beanClassName+"() {");
+        indent();
+        p("this.bean = this;");
+        unindent();
+        p("}");
+        p();
+        p("public "+beanClassName+"("+beanClassName+" copy) {");
+        indent();
+        p("this.bean = copy;");
+        unindent();
+        p("}");
+        p();
+        p("public "+beanClassName+" copy() {");
+        indent();
+        p("return new "+beanClassName+"(bean);");
+        unindent();
+        p("}");
+        p();
+                
+        generateMethodFreeze(m, bufferClassName);
+        
+        p("private void copyCheck() {");
+        indent();
+        p("assert frozen==null : org.apache.activemq.protobuf.MessageBufferSupport.FORZEN_ERROR_MESSAGE;");
+        p("if (bean != this) {");
+        indent();
+        p("copy(bean);");
+        unindent();
+        p("}");
+        unindent();
+        p("}");
+        p();
+
+        generateMethodCopyFromBean(m, beanClassName);
+
+        // Generate the field accessors..
+        for (FieldDescriptor field : m.getFields().values()) {
+            generateFieldAccessor(beanClassName, field);
+        }
+        
+        generateMethodToString(m);
+
+        generateMethodMergeFromStream(m, beanClassName);
+
+        generateBeanEquals(m, beanClassName);
+
+        generateMethodMergeFromBean(m, className);
 
         generateMethodClear(m);
 
-        p("public "+className+" clone() {");
-        p("   return new "+className+"().mergeFrom(this);");
+        unindent();
         p("}");
         p();
-        
-        generateMethodMergeFromBean(m, className);
 
-        generateMethodSerializedSize(m);
+        p("static public final class "+bufferClassName+" implements org.apache.activemq.protobuf.MessageBuffer, "+className+" {");
+        p();
+        indent();
         
-        generateMethodMergeFromStream(m, className);
-
-        generateMethodWriteTo(m);
-
-        generateMethodParseFrom(m, className);
-
-        generateMethodToString(m);
-        
-        generateMethodVisitor(m);
-                
-        generateMethodType(m, className);
-        
-        generateMethodEquals(m, className);
-                
+        p("private "+beanClassName+" bean;");
+        p("private org.apache.activemq.protobuf.Buffer buffer;");
+        p("private int size=-1;");
+        p("private int hashCode;");
+        p();
+        p("private "+bufferClassName+"(org.apache.activemq.protobuf.Buffer buffer) {");
+        indent();
+        p("this.buffer = buffer;");
+        unindent();
+        p("}");
+        p();
+        p("private "+bufferClassName+"("+beanClassName+" bean) {");
+        indent();
+        p("this.bean = bean;");
+        unindent();
+        p("}");
+        p();
+        p("public "+beanClassName+" copy() {");
+        indent();
+        p("return bean().copy();");
+        unindent();
+        p("}");
+        p();
+        p("public "+bufferClassName+" freeze() {");
+        indent();
+        p("return this;");
+        unindent();
+        p("}");
+        p();
+        p("private "+beanClassName+" bean() {");
+        indent();
+        p("if (bean == null) {");
+        indent();
+        p("try {");
+        indent();
+        p("bean = new "+beanClassName+"().mergeUnframed(new org.apache.activemq.protobuf.CodedInputStream(buffer));");
+        p("bean.frozen=this;");
+        unindent();
+        p("} catch (org.apache.activemq.protobuf.InvalidProtocolBufferException e) {");
+        indent();
+        p("throw new RuntimeException(e);");
+        unindent();
+        p("} catch (java.io.IOException e) {");
+        indent();
+        p("throw new RuntimeException(\"An IOException was thrown (should never happen in this method).\", e);");
+        unindent();
+        p("}");
+        unindent();
+        p("}");
+        p("return bean;");
         unindent();
         p("}");
         p();
         
-        p(staticOption+"abstract class " + className + "Base<T> extends "+baseClass+"<T> {");
-        p();
+        p("public String toString() {");
         indent();
-        
-        // Generate the field accessors..
+        p("return bean().toString();");
+        unindent();
+        p("}");
+        p();
+        p("public java.lang.StringBuilder toString(java.lang.StringBuilder sb, String prefix) {");
+        indent();
+        p("return bean().toString(sb, prefix);");
+        unindent();
+        p("}");
+        p();
+
         for (FieldDescriptor field : m.getFields().values()) {
-            if( isInBaseClass(m, field) ) {
-                continue;
-            }
-            generateFieldAccessor(field);
+            generateBufferGetters(field);
         }
+
+        generateMethodWrite(m);
         
+        generateMethodSerializedSize(m);
+
+        generateMethodParseFrom(m, bufferClassName, beanClassName);
+        
+        generateBufferEquals(m, bufferClassName);
+
+        unindent();
+        p("}");
+        p();
+
+
+//        generateMethodVisitor(m);
+//        generateMethodType(m, className);
+        
+       
+        unindent();
+        p("}");
+        p();
+
+    }
+
+    private void generateMethodFreeze(MessageDescriptor m, String bufferClassName) {
+        p("public boolean frozen() {");
+        indent();
+        p("return frozen!=null;");
+        unindent();
+        p("}");
+        p();
+        p("public "+bufferClassName+" freeze() {");
+        indent();
+        p("if( frozen==null ) {");
+        indent();
+        p("frozen = new "+bufferClassName+"(bean);");
+        p("frozen.serializedSizeUnframed();");
+        unindent();
+        p("}");
+        p("return frozen;");
+        unindent();
+        p("}");
+        p();
+    }
+    
+    /**
+     * @param m
+     * @param className
+     */
+    private void generateMethodCopyFromBean(MessageDescriptor m, String className) {
+        p("private void copy("+className+" other) {");
+        indent();
+        p("this.bean = this;");
+        for (FieldDescriptor field : m.getFields().values()) {
+            String lname = lCamel(field.getName());
+            String type = field.getRule()==FieldDescriptor.REPEATED_RULE ? javaCollectionType(field):javaType(field);
+            boolean primitive = field.getTypeDescriptor()==null || field.getTypeDescriptor().isEnum();
+            if( field.isRepeated() ) {
+                if( primitive ) {
+                    p("this.f_" + lname + " = other.f_" + lname + ";");
+                    p("if( this.f_" + lname + " !=null && !other.frozen()) {");
+                    indent();
+                    p("this.f_" + lname + " = new java.util.ArrayList<"+type+">(this.f_" + lname + ");");
+                    unindent();
+                    p("}");
+                } else {
+                    p("this.f_" + lname + " = other.f_" + lname + ";");
+                    p("if( this.f_" + lname + " !=null) {");
+                    indent();
+                    p("this.f_" + lname + " = new java.util.ArrayList<"+type+">(other.f_" + lname + ".size());");
+                    p("for( "+type+" e :  other.f_" + lname + ") {");
+                    indent();
+                    p("this.f_" + lname + ".add(e.copy());");
+                    unindent();
+                    p("}");
+                    unindent();
+                    p("}");
+                }
+            } else {
+                if( primitive ) {
+                    p("this.f_" + lname + " = other.f_" + lname + ";");
+                    p("this.b_" + lname + " = other.b_" + lname + ";");
+                } else {
+                    p("this.f_" + lname + " = other.f_" + lname + ";");
+                    p("if( this.f_" + lname + " !=null ) {");
+                    indent();
+                    p("this.f_" + lname + " = this.f_" + lname + ".copy();");
+                    unindent();
+                    p("}");
+                }
+            }
+        }
         unindent();
         p("}");
         p();
     }
 
-	private boolean isInBaseClass(MessageDescriptor m, FieldDescriptor field) {
-		if( m.getBaseType() ==null )
-			return false;
-		return m.getBaseType().getFields().containsKey(field.getName());
-	}
 
 	/**
      * If the java_visitor message option is set, then this method generates a visitor method.  The option 
@@ -427,71 +596,78 @@ public class JavaGenerator {
         }
     }
     
-    private void generateMethodParseFrom(MessageDescriptor m, String className) {
-    	
-    	String postMergeProcessing = ".checktInitialized()";
-        if( deferredDecode ) {
-        	postMergeProcessing="";
-        }
+    private void generateMethodParseFrom(MessageDescriptor m, String bufferClassName, String beanClassName) {
+        p("public static "+beanClassName+" parseUnframed(org.apache.activemq.protobuf.CodedInputStream data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        indent();
+        p("return new "+beanClassName+"().mergeUnframed(data);");
+        unindent();
+        p("}");
+        p();
+        p("public static "+beanClassName+" parseUnframed(java.io.InputStream data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        indent();
+        p("return parseUnframed(new org.apache.activemq.protobuf.CodedInputStream(data));");
+        unindent();
+        p("}");
+        p();
+        p("public static "+bufferClassName+" parseUnframed(org.apache.activemq.protobuf.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("return new "+bufferClassName+"(data);");
+        unindent();
+        p("}");
+        p();
+        p("public static "+bufferClassName+" parseUnframed(byte[] data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("return parseUnframed(new org.apache.activemq.protobuf.Buffer(data));");
+        unindent();
+        p("}");
+        p();
+        p("public static "+bufferClassName+" parseFramed(org.apache.activemq.protobuf.CodedInputStream data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        indent();
+        p("int length = data.readRawVarint32();");
+        p("int oldLimit = data.pushLimit(length);");
+        p(""+bufferClassName+" rc = parseUnframed(data.readRawBytes(length));");
+        p("data.popLimit(oldLimit);");
+        p("return rc;");
+        unindent();
+        p("}");
+        p();
+        p("public static "+bufferClassName+" parseFramed(org.apache.activemq.protobuf.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("try {");
+        indent();
+        p("org.apache.activemq.protobuf.CodedInputStream input = new org.apache.activemq.protobuf.CodedInputStream(data);");
+        p(""+bufferClassName+" rc = parseFramed(input);");
+        p("input.checkLastTagWas(0);");
+        p("return rc;");
+        unindent();
+        p("} catch (org.apache.activemq.protobuf.InvalidProtocolBufferException e) {");
+        indent();
+        p("throw e;");
+        unindent();
+        p("} catch (java.io.IOException e) {");
+        indent();
+        p("throw new RuntimeException(\"An IOException was thrown (should never happen in this method).\", e);");
+        unindent();
+        p("}");
+        unindent();
+        p("}");
+        p();
+        p("public static "+bufferClassName+" parseFramed(byte[] data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
+        indent();
+        p("return parseFramed(new org.apache.activemq.protobuf.Buffer(data));");
+        unindent();
+        p("}");
+        p();
+        p("public static "+bufferClassName+" parseFramed(java.io.InputStream data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException {");
+        indent();
+        p("return parseUnframed(org.apache.activemq.protobuf.MessageBufferSupport.readFrame(data));");
+        unindent();
+        p("}");
+        p();
         
-        p("public static "+className+" parseUnframed(org.apache.activemq.protobuf.CodedInputStream data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException {");
-        indent();
-        p("return new "+className+"().mergeUnframed(data)"+postMergeProcessing+";");
-        unindent();
-        p("}");
-        p();
-
-        p("public static "+className+" parseUnframed(org.apache.activemq.protobuf.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
-        indent();
-        p("return new "+className+"().mergeUnframed(data)"+postMergeProcessing+";");
-        unindent();
-        p("}");
-        p();
-
-        p("public static "+className+" parseUnframed(byte[] data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
-        indent();
-        p("return new "+className+"().mergeUnframed(data)"+postMergeProcessing+";");
-        unindent();
-        p("}");
-        p();
-        
-        p("public static "+className+" parseUnframed(java.io.InputStream data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException {");
-        indent();
-        p("return new "+className+"().mergeUnframed(data)"+postMergeProcessing+";");
-        unindent();
-        p("}");
-        p();
-        
-        p("public static "+className+" parseFramed(org.apache.activemq.protobuf.CodedInputStream data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException {");
-        indent();
-        p("return new "+className+"().mergeFramed(data)"+postMergeProcessing+";");
-        unindent();
-        p("}");
-        p();
-        
-        p("public static "+className+" parseFramed(org.apache.activemq.protobuf.Buffer data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
-        indent();
-        p("return new "+className+"().mergeFramed(data)"+postMergeProcessing+";");
-        unindent();
-        p("}");
-        p();
-
-        p("public static "+className+" parseFramed(byte[] data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException {");
-        indent();
-        p("return new "+className+"().mergeFramed(data)"+postMergeProcessing+";");
-        unindent();
-        p("}");
-        p();
-        
-        p("public static "+className+" parseFramed(java.io.InputStream data) throws org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException {");
-        indent();
-        p("return new "+className+"().mergeFramed(data)"+postMergeProcessing+";");
-        unindent();
-        p("}");
-        p();
     }
 
-    private void generateMethodEquals(MessageDescriptor m, String className) {
+    private void generateBeanEquals(MessageDescriptor m, String className) {
         p("public boolean equals(Object obj) {");
         indent();
         p("if( obj==this )");
@@ -507,108 +683,139 @@ public class JavaGenerator {
         
         p("public boolean equals("+className+" obj) {");
         indent();
-        if( deferredDecode ) {
-        	p("return toUnframedBuffer().equals(obj.toUnframedBuffer());");
-        } else {        
-	        for (FieldDescriptor field : m.getFields().values()) {
-	            String uname = uCamel(field.getName());
-	            String getterMethod="get"+uname+"()";     
-	            String hasMethod = "has"+uname+"()";
-	
-	            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
-	                getterMethod = "get"+uname+"List()";
-	            }
-	            
-	            p("if ("+hasMethod+" ^ obj."+hasMethod+" ) ");
-	            p("   return false;");
-	            
-	            
-	            
-	            if( field.getRule() != FieldDescriptor.REPEATED_RULE && (field.isNumberType() || field.getType()==FieldDescriptor.BOOL_TYPE) ) {
-	                p("if ("+hasMethod+" && ( "+getterMethod+"!=obj."+getterMethod+" ))");
-	            } else {
-	                p("if ("+hasMethod+" && ( !"+getterMethod+".equals(obj."+getterMethod+") ))");
-	            }
-	            p("   return false;");
-	        }
-	        p("return true;");
+        for (FieldDescriptor field : m.getFields().values()) {
+            String uname = uCamel(field.getName());
+            String getterMethod="get"+uname+"()";     
+            String hasMethod = "has"+uname+"()";
+
+            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
+                getterMethod = "get"+uname+"List()";
+            }
+            
+            p("if ("+hasMethod+" ^ obj."+hasMethod+" ) ");
+            p("   return false;");
+            
+            
+            
+            if( field.getRule() != FieldDescriptor.REPEATED_RULE && (field.isNumberType() || field.getType()==FieldDescriptor.BOOL_TYPE) ) {
+                p("if ("+hasMethod+" && ( "+getterMethod+"!=obj."+getterMethod+" ))");
+            } else {
+                p("if ("+hasMethod+" && ( !"+getterMethod+".equals(obj."+getterMethod+") ))");
+            }
+            p("   return false;");
         }
+        p("return true;");
         unindent();
         p("}");
         p("");
         p("public int hashCode() {");
         indent();
         int hc = className.hashCode();
-        if( deferredDecode ) {
-            p("return "+hc+" ^ toUnframedBuffer().hashCode();");
-        } else {
-            p("int rc="+hc+";");
-	        int counter=0;
-	        for (FieldDescriptor field : m.getFields().values()) {
-	        	counter++;
-	        	
-	            String uname = uCamel(field.getName());
-	            String getterMethod="get"+uname+"()";     
-	            String hasMethod = "has"+uname+"()";
-	
-	            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
-	                getterMethod = "get"+uname+"List()";
-	            }
-	            
-	            p("if ("+hasMethod+") {");
-	            indent();
-	            
-	            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
-	                p("rc ^= ( "+uname.hashCode()+"^"+getterMethod+".hashCode() );");
-	            } else if( field.isInteger32Type() ) {
-	                p("rc ^= ( "+uname.hashCode()+"^"+getterMethod+" );");
-	            } else if( field.isInteger64Type() ) {
-	                p("rc ^= ( "+uname.hashCode()+"^(new Long("+getterMethod+")).hashCode() );");
-	            } else if( field.getType()==FieldDescriptor.DOUBLE_TYPE ) {
-	                p("rc ^= ( "+uname.hashCode()+"^(new Double("+getterMethod+")).hashCode() );");
-	            } else if( field.getType()==FieldDescriptor.FLOAT_TYPE ) {
-	                p("rc ^= ( "+uname.hashCode()+"^(new Double("+getterMethod+")).hashCode() );");
-	            } else if( field.getType()==FieldDescriptor.BOOL_TYPE ) {
-	                p("rc ^= ( "+uname.hashCode()+"^ ("+getterMethod+"? "+counter+":-"+counter+") );");
-	            } else {
-	                p("rc ^= ( "+uname.hashCode()+"^"+getterMethod+".hashCode() );");
-	            }
-	            
-	            unindent();
-	            p("}");
-	            
-	        }
-	        p("return rc;");
+        p("int rc="+hc+";");
+        int counter=0;
+        for (FieldDescriptor field : m.getFields().values()) {
+        	counter++;
+        	
+            String uname = uCamel(field.getName());
+            String getterMethod="get"+uname+"()";     
+            String hasMethod = "has"+uname+"()";
+
+            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
+                getterMethod = "get"+uname+"List()";
+            }
+            
+            p("if ("+hasMethod+") {");
+            indent();
+            
+            if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
+                p("rc ^= ( "+uname.hashCode()+"^"+getterMethod+".hashCode() );");
+            } else if( field.isInteger32Type() ) {
+                p("rc ^= ( "+uname.hashCode()+"^"+getterMethod+" );");
+            } else if( field.isInteger64Type() ) {
+                p("rc ^= ( "+uname.hashCode()+"^(new Long("+getterMethod+")).hashCode() );");
+            } else if( field.getType()==FieldDescriptor.DOUBLE_TYPE ) {
+                p("rc ^= ( "+uname.hashCode()+"^(new Double("+getterMethod+")).hashCode() );");
+            } else if( field.getType()==FieldDescriptor.FLOAT_TYPE ) {
+                p("rc ^= ( "+uname.hashCode()+"^(new Double("+getterMethod+")).hashCode() );");
+            } else if( field.getType()==FieldDescriptor.BOOL_TYPE ) {
+                p("rc ^= ( "+uname.hashCode()+"^ ("+getterMethod+"? "+counter+":-"+counter+") );");
+            } else {
+                p("rc ^= ( "+uname.hashCode()+"^"+getterMethod+".hashCode() );");
+            }
+            unindent();
+            p("}");
         }
+        p("return rc;");
         unindent();
         p("}");
         p("");
 	}
     
+    private void generateBufferEquals(MessageDescriptor m, String className) {
+        p("public boolean equals(Object obj) {");
+        indent();
+        p("if( obj==this )");
+        p("   return true;");
+        p("");
+        p("if( obj==null || obj.getClass()!="+className+".class )");
+        p("   return false;");
+        p("");
+        p("return equals(("+className+")obj);");
+        unindent();
+        p("}");
+        p("");
+        
+        p("public boolean equals("+className+" obj) {");
+        indent();
+        p("return toUnframedBuffer().equals(obj.toUnframedBuffer());");
+        unindent();
+        p("}");
+        p("");
+        p("public int hashCode() {");
+        indent();
+        int hc = className.hashCode();
+        p("if( hashCode==0 ) {");
+        p("hashCode="+hc+" ^ toUnframedBuffer().hashCode();");
+        p("}");
+        p("return hashCode;");
+        unindent();
+        p("}");
+        p("");
+    }
+
     /**
      * @param m
      */
     private void generateMethodSerializedSize(MessageDescriptor m) {
+        
+        p("public int serializedSizeFramed() {");
+        indent();
+        p("int t = serializedSizeUnframed();");
+        p("return org.apache.activemq.protobuf.CodedOutputStream.computeRawVarint32Size(t) + t;");
+        unindent();
+        p("}");
+        p();
         p("public int serializedSizeUnframed() {");
         indent();
-        if( deferredDecode ) {
-			p("if (encodedForm != null) {");
-			indent();
-            p("return encodedForm.length;");
-			unindent();
-			p("}");
-        }
-        p("if (memoizedSerializedSize != -1)");
-        p("   return memoizedSerializedSize;");
+		p("if (buffer != null) {");
+		indent();
+        p("return buffer.length;");
+		unindent();
+		p("}");
+        p("if (size != -1)");
+        p("   return size;");
         p();
-        p("int size = 0;");
+        p("size = 0;");
         for (FieldDescriptor field : m.getFields().values()) {
             
             String uname = uCamel(field.getName());
             String getter="get"+uname+"()";            
             String type = javaType(field);
-            p("if (has"+uname+"()) {");
-            indent();
+            
+            if( !field.isRequired() ) {
+                p("if (has"+uname+"()) {");
+                indent();
+            }
             
             if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
                 p("for ("+type+" i : get"+uname+"List()) {");
@@ -649,22 +856,24 @@ public class JavaGenerator {
             } else if( field.getTypeDescriptor().isEnum() ) {
                 p("size += org.apache.activemq.protobuf.CodedOutputStream.computeEnumSize("+field.getTag()+", "+getter+".getNumber());");
             } else if ( field.getGroup()!=null ) {
-                p("size += computeGroupSize("+field.getTag()+", "+getter+");");
+                errors.add("This code generator does not support group fields.");
+//                p("size += org.apache.activemq.protobuf.MessageBufferSupport.computeGroupSize("+field.getTag()+", ("+type+"Buffer)"+getter+");");
             } else {
-                p("size += computeMessageSize("+field.getTag()+", "+getter+");");
+                p("size += org.apache.activemq.protobuf.MessageBufferSupport.computeMessageSize("+field.getTag()+", "+getter+".freeze());");
             }
             if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
                 unindent();
                 p("}");
             }
-            //TODO: finish this up.
-            unindent();
-            p("}");
+            
+            if( !field.isRequired() ) {
+                unindent();
+                p("}");
+            }
 
         }
         // TODO: handle unknown fields
         // size += getUnknownFields().getSerializedSize();");
-        p("memoizedSerializedSize = size;");
         p("return size;");
         unindent();
         p("}");
@@ -674,35 +883,90 @@ public class JavaGenerator {
     /**
      * @param m
      */
-    private void generateMethodWriteTo(MessageDescriptor m) {
+    private void generateMethodWrite(MessageDescriptor m) {
+        
+        p("public org.apache.activemq.protobuf.Buffer toUnframedBuffer() {");
+        indent();
+        p("if( buffer !=null ) {");
+        indent();
+        p("return buffer;");
+        unindent();
+        p("}");
+        p("return org.apache.activemq.protobuf.MessageBufferSupport.toUnframedBuffer(this);");
+        unindent();
+        p("}");
+        p();
+        p("public org.apache.activemq.protobuf.Buffer toFramedBuffer() {");
+        indent();
+        p("return org.apache.activemq.protobuf.MessageBufferSupport.toFramedBuffer(this);");
+        unindent();
+        p("}");
+        p();
+        p("public byte[] toUnframedByteArray() {");
+        indent();
+        p("return toUnframedBuffer().toByteArray();");
+        unindent();
+        p("}");
+        p();
+        p("public byte[] toFramedByteArray() {");
+        indent();
+        p("return toFramedBuffer().toByteArray();");
+        unindent();
+        p("}");
+        p();
+        p("public void writeFramed(org.apache.activemq.protobuf.CodedOutputStream output) throws java.io.IOException {");
+        indent();
+        p("output.writeRawVarint32(serializedSizeUnframed());");
+        p("writeUnframed(output);");
+        unindent();
+        p("}");
+        p();
+        p("public void writeFramed(java.io.OutputStream output) throws java.io.IOException {");
+        indent();
+        p("org.apache.activemq.protobuf.CodedOutputStream codedOutput = new org.apache.activemq.protobuf.CodedOutputStream(output);");
+        p("writeFramed(codedOutput);");
+        p("codedOutput.flush();");
+        unindent();
+        p("}");
+        p();
+        
+        p("public void writeUnframed(java.io.OutputStream output) throws java.io.IOException {");
+        indent();
+        p("org.apache.activemq.protobuf.CodedOutputStream codedOutput = new org.apache.activemq.protobuf.CodedOutputStream(output);");
+        p("writeUnframed(codedOutput);");
+        p("codedOutput.flush();");
+        unindent();
+        p("}");
+        p();
+
         p("public void writeUnframed(org.apache.activemq.protobuf.CodedOutputStream output) throws java.io.IOException {");
         indent();
         
-        if( deferredDecode ) {
-			p("if (encodedForm == null) {");
-			indent();
-            p("int size = serializedSizeUnframed();");
-            p("encodedForm = output.getNextBuffer(size);");
-            p("org.apache.activemq.protobuf.CodedOutputStream original=null;");
-            p("if( encodedForm == null ) {");
-            indent();
-            p("encodedForm = new org.apache.activemq.protobuf.Buffer(new byte[size]);");
-            p("original = output;");
-            p("output = new org.apache.activemq.protobuf.CodedOutputStream(encodedForm);");
-            unindent();
-            p("}");
-        }
-        
+		p("if (buffer == null) {");
+		indent();
+        p("int size = serializedSizeUnframed();");
+        p("buffer = output.getNextBuffer(size);");
+        p("org.apache.activemq.protobuf.CodedOutputStream original=null;");
+        p("if( buffer == null ) {");
+        indent();
+        p("buffer = new org.apache.activemq.protobuf.Buffer(new byte[size]);");
+        p("original = output;");
+        p("output = new org.apache.activemq.protobuf.CodedOutputStream(buffer);");
+        unindent();
+        p("}");
 
         for (FieldDescriptor field : m.getFields().values()) {
             String uname = uCamel(field.getName());
-            String getter="get"+uname+"()";            
+            String getter="bean.get"+uname+"()";            
             String type = javaType(field);
-            p("if (has"+uname+"()) {");
-            indent();
+            
+            if( !field.isRequired() ) {
+                p("if (bean.has"+uname+"()) {");
+                indent();
+            }
             
             if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
-                p("for ("+type+" i : get"+uname+"List()) {");
+                p("for ("+type+" i : bean.get"+uname+"List()) {");
                 indent();
                 getter = "i";
             }
@@ -740,9 +1004,10 @@ public class JavaGenerator {
             } else if( field.getTypeDescriptor().isEnum() ) {
                 p("output.writeEnum("+field.getTag()+", "+getter+".getNumber());");
             } else if ( field.getGroup()!=null ) {
-                p("writeGroup(output, "+field.getTag()+", "+getter+");");
+                errors.add("This code generator does not support group fields.");
+//                p("writeGroup(output, "+field.getTag()+", "+getter+");");
             } else {
-                p("writeMessage(output, "+field.getTag()+", "+getter+");");
+                p("org.apache.activemq.protobuf.MessageBufferSupport.writeMessage(output, "+field.getTag()+", "+getter+".freeze());");
             }
             
             if( field.getRule() == FieldDescriptor.REPEATED_RULE ) {
@@ -750,25 +1015,25 @@ public class JavaGenerator {
                 p("}");
             }
             
-            unindent();
-            p("}");
+            if( !field.isRequired() ) {
+                unindent();
+                p("}");
+            }
         }
         
-        if( deferredDecode ) {
-            p("if( original !=null ) {");
-            indent();
-            p("output.checkNoSpaceLeft();");
-            p("output = original;");
-            p("output.writeRawBytes(encodedForm);");
-            unindent();
-            p("}");
-            unindent();
-            p("} else {");
-            indent();
-            p("output.writeRawBytes(encodedForm);");
-            unindent();
-            p("}");
-        }
+        p("if( original !=null ) {");
+        indent();
+        p("output.checkNoSpaceLeft();");
+        p("output = original;");
+        p("output.writeRawBytes(buffer);");
+        unindent();
+        p("}");
+        unindent();
+        p("} else {");
+        indent();
+        p("output.writeRawBytes(buffer);");
+        unindent();
+        p("}");
 
         unindent();
         p("}");
@@ -780,9 +1045,16 @@ public class JavaGenerator {
      * @param className
      */
     private void generateMethodMergeFromStream(MessageDescriptor m, String className) {
+        p("public "+className+" mergeUnframed(java.io.InputStream input) throws java.io.IOException {");
+        indent();
+        p("return mergeUnframed(new org.apache.activemq.protobuf.CodedInputStream(input));");
+        unindent();
+        p("}");
+        p();
         p("public "+className+" mergeUnframed(org.apache.activemq.protobuf.CodedInputStream input) throws java.io.IOException {");
         indent();
-		{        
+		{
+            p("copyCheck();");
 			p("while (true) {");
 			indent();
 			{
@@ -804,7 +1076,7 @@ public class JavaGenerator {
 					String setter = "set" + uname;
 					boolean repeated = field.getRule() == FieldDescriptor.REPEATED_RULE;
 					if (repeated) {
-						setter = "get" + uname + "List().add";
+						setter = "create" + uname + "List().add";
 					}
 					if (field.getType() == FieldDescriptor.STRING_TYPE) {
 						p("case "
@@ -903,46 +1175,40 @@ public class JavaGenerator {
 						p("}");
 
 					} else if (field.getGroup() != null) {
-						p("case "
-								+ makeTag(field.getTag(), WIRETYPE_START_GROUP)
-								+ ":");
-						indent();
-						String type = javaType(field);
-						if (repeated) {
-							p(setter + "(readGroup(input, " + field.getTag()
-									+ ", new " + type + "()));");
-						} else {
-							p("if (has" + uname + "()) {");
-							indent();
-							p("readGroup(input, " + field.getTag() + ", get"
-									+ uname + "());");
-							unindent();
-							p("} else {");
-							indent();
-							p(setter + "(readGroup(input, " + field.getTag()
-									+ ",new " + type + "()));");
-							unindent();
-							p("}");
-						}
-						p("");
+					    errors.add("This code generator does not support group fields.");
+//						p("case "+ makeTag(field.getTag(), WIRETYPE_START_GROUP)+ ":");
+//						indent();
+//						String type = javaType(field);
+//						if (repeated) {
+//							p(setter + "(readGroup(input, " + field.getTag()+ ", new " + type + "()));");
+//						} else {
+//							p("if (has" + uname + "()) {");
+//							indent();
+//							p("readGroup(input, " + field.getTag() + ", get"
+//									+ uname + "());");
+//							unindent();
+//							p("} else {");
+//							indent();
+//							p(setter + "(readGroup(input, " + field.getTag()
+//									+ ",new " + type + "()));");
+//							unindent();
+//							p("}");
+//						}
+//						p("");
 					} else {
-						p("case "
-								+ makeTag(field.getTag(),
-										WIRETYPE_LENGTH_DELIMITED) + ":");
+						p("case "+ makeTag(field.getTag(),WIRETYPE_LENGTH_DELIMITED) + ":");
 						indent();
 						String type = javaType(field);
 						if (repeated) {
-							p(setter + "(new " + type
-									+ "().mergeFramed(input));");
+							p(setter + "("+type+"."+type+"Buffer.parseFramed(input));");
 						} else {
 							p("if (has" + uname + "()) {");
 							indent();
-							p("get" + uname + "().mergeFramed(input);");
+							p("set" + uname + "(get" + uname + "().copy().mergeFrom("+type+"."+type+"Buffer.parseFramed(input)));");
 							unindent();
 							p("} else {");
 							indent();
-							p(setter + "(new " + type
-									+ "().mergeFramed(input));");
+                            p(setter + "("+type+"."+type+"Buffer.parseFramed(input));");
 							unindent();
 							p("}");
 						}
@@ -958,14 +1224,15 @@ public class JavaGenerator {
 		unindent();
 		p("}");
     }
-
+   
     /**
 	 * @param m
 	 * @param className
 	 */
     private void generateMethodMergeFromBean(MessageDescriptor m, String className) {
-        p("public "+className+" mergeFrom("+className+" other) {");
+        p("public "+className+"Bean mergeFrom("+className+" other) {");
         indent();
+        p("copyCheck();");
         for (FieldDescriptor field : m.getFields().values()) {
             String uname = uCamel(field.getName());
             p("if (other.has"+uname+"()) {");
@@ -984,17 +1251,17 @@ public class JavaGenerator {
                 if( field.isRepeated() ) {
                     p("for("+type+" element: other.get"+uname+"List() ) {");
                     indent();
-                        p("get"+uname+"List().add(element.clone());");
+                        p("get"+uname+"List().add(element.copy());");
                     unindent();
                     p("}");
                 } else {
                     p("if (has"+uname+"()) {");
                     indent();
-                    p("get"+uname+"().mergeFrom(other.get"+uname+"());");
+                    p("set"+uname+"(get"+uname+"().copy().mergeFrom(other.get"+uname+"()));");
                     unindent();
                     p("} else {");
                     indent();
-                    p("set"+uname+"(other.get"+uname+"().clone());");
+                    p("set"+uname+"(other.get"+uname+"().copy());");
                     unindent();
                     p("}");
                 }
@@ -1014,7 +1281,6 @@ public class JavaGenerator {
     private void generateMethodClear(MessageDescriptor m) {
         p("public void clear() {");
         indent();
-        p("super.clear();");
         for (FieldDescriptor field : m.getFields().values()) {
             String uname = uCamel(field.getName());
             p("clear" + uname + "();");
@@ -1024,66 +1290,66 @@ public class JavaGenerator {
         p();
     }
 
-    private void generateMethodAssertInitialized(MessageDescriptor m, String className) {
-        
-        p("public java.util.ArrayList<String> missingFields() {");
-        indent();
-        p("java.util.ArrayList<String> missingFields = super.missingFields();");
-        
-        for (FieldDescriptor field : m.getFields().values()) {
-            String uname = uCamel(field.getName());
-            if( field.isRequired() ) {
-                p("if(  !has" + uname + "() ) {");
-                indent();
-                p("missingFields.add(\""+field.getName()+"\");");
-                unindent();
-                p("}");
-            }
-        }
-        
-        if( !deferredDecode ) {
-	        for (FieldDescriptor field : m.getFields().values()) {
-	            if( field.getTypeDescriptor()!=null && !field.getTypeDescriptor().isEnum()) {
-	                String uname = uCamel(field.getName());
-	                p("if( has" + uname + "() ) {");
-	                indent();
-	                if( !field.isRepeated() ) {
-	                    p("try {");
-	                    indent();
-	                    p("get" + uname + "().assertInitialized();");
-	                    unindent();
-	                    p("} catch (org.apache.activemq.protobuf.UninitializedMessageException e){");
-	                    indent();
-	                    p("missingFields.addAll(prefix(e.getMissingFields(),\""+field.getName()+".\"));");
-	                    unindent();
-	                    p("}");
-	                } else {
-	                    String type = javaCollectionType(field);
-	                    p("java.util.List<"+type+"> l = get" + uname + "List();");
-	                    p("for( int i=0; i < l.size(); i++ ) {");
-	                    indent();
-	                    p("try {");
-	                    indent();
-	                    p("l.get(i).assertInitialized();");
-	                    unindent();
-	                    p("} catch (org.apache.activemq.protobuf.UninitializedMessageException e){");
-	                    indent();
-	                    p("missingFields.addAll(prefix(e.getMissingFields(),\""+field.getName()+"[\"+i+\"]\"));");
-	                    unindent();
-	                    p("}");
-	                    unindent();
-	                    p("}");
-	                }
-	                unindent();
-	                p("}");
-	            }
-	        }
-        }
-        p("return missingFields;");
-        unindent();
-        p("}");
-        p();
-    }
+//    private void generateMethodAssertInitialized(MessageDescriptor m, String className) {
+//        
+//        p("public java.util.ArrayList<String> missingFields() {");
+//        indent();
+//        p("java.util.ArrayList<String> missingFields = super.missingFields();");
+//        
+//        for (FieldDescriptor field : m.getFields().values()) {
+//            String uname = uCamel(field.getName());
+//            if( field.isRequired() ) {
+//                p("if(  !has" + uname + "() ) {");
+//                indent();
+//                p("missingFields.add(\""+field.getName()+"\");");
+//                unindent();
+//                p("}");
+//            }
+//        }
+//        
+//        if( !deferredDecode ) {
+//	        for (FieldDescriptor field : m.getFields().values()) {
+//	            if( field.getTypeDescriptor()!=null && !field.getTypeDescriptor().isEnum()) {
+//	                String uname = uCamel(field.getName());
+//	                p("if( has" + uname + "() ) {");
+//	                indent();
+//	                if( !field.isRepeated() ) {
+//	                    p("try {");
+//	                    indent();
+//	                    p("get" + uname + "().assertInitialized();");
+//	                    unindent();
+//	                    p("} catch (org.apache.activemq.protobuf.UninitializedMessageException e){");
+//	                    indent();
+//	                    p("missingFields.addAll(prefix(e.getMissingFields(),\""+field.getName()+".\"));");
+//	                    unindent();
+//	                    p("}");
+//	                } else {
+//	                    String type = javaCollectionType(field);
+//	                    p("java.util.List<"+type+"> l = get" + uname + "List();");
+//	                    p("for( int i=0; i < l.size(); i++ ) {");
+//	                    indent();
+//	                    p("try {");
+//	                    indent();
+//	                    p("l.get(i).assertInitialized();");
+//	                    unindent();
+//	                    p("} catch (org.apache.activemq.protobuf.UninitializedMessageException e){");
+//	                    indent();
+//	                    p("missingFields.addAll(prefix(e.getMissingFields(),\""+field.getName()+"[\"+i+\"]\"));");
+//	                    unindent();
+//	                    p("}");
+//	                    unindent();
+//	                    p("}");
+//	                }
+//	                unindent();
+//	                p("}");
+//	            }
+//	        }
+//        }
+//        p("return missingFields;");
+//        unindent();
+//        p("}");
+//        p();
+//    }
 
     private void generateMethodToString(MessageDescriptor m) {
         
@@ -1096,10 +1362,6 @@ public class JavaGenerator {
 
         p("public java.lang.StringBuilder toString(java.lang.StringBuilder sb, String prefix) {");
         indent();
-        
-        if( deferredDecode ) {
-        	p("load();");
-        }        
         for (FieldDescriptor field : m.getFields().values()) {
             String uname = uCamel(field.getName());
             p("if(  has" + uname + "() ) {");
@@ -1134,20 +1396,97 @@ public class JavaGenerator {
             unindent();
             p("}");
         }
-
-        
         p("return sb;");
         unindent();
         p("}");
         p();
 
     }
-
+    
     /**
      * @param field
      * @param className 
      */
-    private void generateFieldAccessor(FieldDescriptor field) {
+    private void generateBufferGetters(FieldDescriptor field) {
+        String uname = uCamel(field.getName());
+        String type = field.getRule()==FieldDescriptor.REPEATED_RULE ? javaCollectionType(field):javaType(field);
+        boolean repeated = field.getRule()==FieldDescriptor.REPEATED_RULE;
+
+        // Create the fields..
+        p("// " + field.getRule() + " " + field.getType() + " " + field.getName() + " = " + field.getTag() + ";");
+        if( repeated ) {
+            // Create the field accessors
+            p("public boolean has" + uname + "() {");
+            indent();
+            p("return bean().has" + uname + "();");
+            unindent();
+            p("}");
+            p();
+            p("public java.util.List<" + type + "> get" + uname + "List() {");
+            indent();
+            p("return bean().get" + uname + "List();");
+            unindent();
+            p("}");
+            p();
+            p("public int get" + uname + "Count() {");
+            indent();
+            p("return bean().get" + uname + "Count();");
+            unindent();
+            p("}");
+            p();
+            p("public " + type + " get" + uname + "(int index) {");
+            indent();
+            p("return bean().get" + uname + "(index);");
+            unindent();
+            p("}");
+            p();
+        } else {
+            // Create the field accessors
+            p("public boolean has" + uname + "() {");
+            indent();
+            p("return bean().has" + uname + "();");
+            unindent();
+            p("}");
+            p();
+            p("public " + type + " get" + uname + "() {");
+            indent();
+            p("return bean().get" + uname + "();");
+            unindent();
+            p("}");
+            p();
+        }
+    }
+    
+    /**
+     * @param field
+     * @param className 
+     */
+    private void generateFieldGetterSignatures(FieldDescriptor field) {
+        String uname = uCamel(field.getName());
+        String type = field.getRule()==FieldDescriptor.REPEATED_RULE ? javaCollectionType(field):javaType(field);
+        boolean repeated = field.getRule()==FieldDescriptor.REPEATED_RULE;
+
+        // Create the fields..
+        p("// " + field.getRule() + " " + field.getType() + " " + field.getName() + " = " + field.getTag() + ";");
+        if( repeated ) {
+            // Create the field accessors
+            p("public boolean has" + uname + "();");
+            p("public java.util.List<" + type + "> get" + uname + "List();");
+            p("public int get" + uname + "Count();");
+            p("public " + type + " get" + uname + "(int index);");
+        } else {
+            // Create the field accessors
+            p("public boolean has" + uname + "();");
+            p("public " + type + " get" + uname + "();");
+        }
+    }
+
+  
+    /**
+     * @param field
+     * @param className 
+     */
+    private void generateFieldAccessor(String beanClassName, FieldDescriptor field) {
         
         String lname = lCamel(field.getName());
         String uname = uCamel(field.getName());
@@ -1166,98 +1505,91 @@ public class JavaGenerator {
             // Create the field accessors
             p("public boolean has" + uname + "() {");
             indent();
-            if( deferredDecode ) {
-            	p("load();");
-            }        
-            p("return this.f_" + lname + "!=null && !this.f_" + lname + ".isEmpty();");
+            p("return bean.f_" + lname + "!=null && !bean.f_" + lname + ".isEmpty();");
             unindent();
             p("}");
             p();
 
             p("public java.util.List<" + type + "> get" + uname + "List() {");
             indent();
-            if( deferredDecode ) {
-            	p("load();");
-            }        
+            p("return bean.f_" + lname + ";");
+            unindent();
+            p("}");
+            p();
+
+            p("public java.util.List<" + type + "> create" + uname + "List() {");
+            indent();
+            p("copyCheck();");
             p("if( this.f_" + lname + " == null ) {");
             indent();
             p("this.f_" + lname + " = new java.util.ArrayList<" + type + ">();");
             unindent();
             p("}");
-            p("return this.f_" + lname + ";");
+            p("return bean.f_" + lname + ";");
             unindent();
             p("}");
             p();
-
-            p("public T set" + uname + "List(java.util.List<" + type + "> " + lname + ") {");
+            
+            p("public "+beanClassName+" set" + uname + "List(java.util.List<" + type + "> " + lname + ") {");
             indent();
-          	p("loadAndClear();");
+          	p("copyCheck();");
             p("this.f_" + lname + " = " + lname + ";");
-            p("return (T)this;");
+            p("return this;");
             unindent();
             p("}");
             p();
             
             p("public int get" + uname + "Count() {");
             indent();
-            if( deferredDecode ) {
-            	p("load();");
-            }        
-            p("if( this.f_" + lname + " == null ) {");
+            p("if( bean.f_" + lname + " == null ) {");
             indent();
             p("return 0;");
             unindent();
             p("}");
-            p("return this.f_" + lname + ".size();");
+            p("return bean.f_" + lname + ".size();");
             unindent();
             p("}");
             p();
             
             p("public " + type + " get" + uname + "(int index) {");
             indent();
-            if( deferredDecode ) {
-            	p("load();");
-            }        
-            p("if( this.f_" + lname + " == null ) {");
+            p("if( bean.f_" + lname + " == null ) {");
             indent();
             p("return null;");
             unindent();
             p("}");
-            p("return this.f_" + lname + ".get(index);");
+            p("return bean.f_" + lname + ".get(index);");
             unindent();
             p("}");
             p();
                             
-            p("public T set" + uname + "(int index, " + type + " value) {");
+            p("public "+beanClassName+" set" + uname + "(int index, " + type + " value) {");
             indent();
-          	p("loadAndClear();");
-            p("get" + uname + "List().set(index, value);");
-            p("return (T)this;");
+            p("this.create" + uname + "List().set(index, value);");
+            p("return this;");
             unindent();
             p("}");
             p();
             
-            p("public T add" + uname + "(" + type + " value) {");
+            p("public "+beanClassName+" add" + uname + "(" + type + " value) {");
             indent();
-          	p("loadAndClear();");
-            p("get" + uname + "List().add(value);");
-            p("return (T)this;");
+            p("this.create" + uname + "List().add(value);");
+            p("return this;");
             unindent();
             p("}");
             p();
             
-            p("public T addAll" + uname + "(java.lang.Iterable<? extends " + type + "> collection) {");
+            p("public "+beanClassName+" addAll" + uname + "(java.lang.Iterable<? extends " + type + "> collection) {");
             indent();
-          	p("loadAndClear();");
-            p("super.addAll(collection, get" + uname + "List());");
-            p("return (T)this;");
+            p("org.apache.activemq.protobuf.MessageBufferSupport.addAll(collection, this.create" + uname + "List());");
+            p("return this;");
             unindent();
             p("}");
             p();
 
             p("public void clear" + uname + "() {");
             indent();
-          	p("loadAndClear();");
+          	p("copyCheck();");
             p("this.f_" + lname + " = null;");
             unindent();
             p("}");
@@ -1274,13 +1606,10 @@ public class JavaGenerator {
             // Create the field accessors
             p("public boolean has" + uname + "() {");
             indent();
-            if( deferredDecode ) {
-            	p("load();");
-            }        
             if (primitive) {
-                p("return this.b_" + lname + ";");
+                p("return bean.b_" + lname + ";");
             } else {
-                p("return this.f_" + lname + "!=null;");
+                p("return bean.f_" + lname + "!=null;");
             }
             unindent();
             p("}");
@@ -1288,24 +1617,14 @@ public class JavaGenerator {
 
             p("public " + type + " get" + uname + "() {");
             indent();
-            if( deferredDecode ) {
-            	p("load();");
-            }        
-            if( field.getTypeDescriptor()!=null && !field.getTypeDescriptor().isEnum()) {
-                p("if( this.f_" + lname + " == null ) {");
-                indent();
-                p("this.f_" + lname + " = new " + type + "();");
-                unindent();
-                p("}");
-            }
-            p("return this.f_" + lname + ";");
+            p("return bean.f_" + lname + ";");
             unindent();
             p("}");
             p();
 
-            p("public T set" + uname + "(" + type + " " + lname + ") {");
+            p("public "+beanClassName+" set" + uname + "(" + type + " " + lname + ") {");
             indent();
-          	p("loadAndClear();");
+          	p("copyCheck();");
             if (primitive) {
                 if( auto_clear_optional_fields && field.isOptional() ) {
                     if( field.isStringType() && !"null".equals(typeDefault)) {
@@ -1318,14 +1637,14 @@ public class JavaGenerator {
                 }
             }
             p("this.f_" + lname + " = " + lname + ";");
-            p("return (T)this;");
+            p("return this;");
             unindent();
             p("}");
             p();
 
             p("public void clear" + uname + "() {");
             indent();
-          	p("loadAndClear();");
+          	p("copyCheck();");
             if (primitive) {
                 p("this.b_" + lname + " = false;");
             }
@@ -1481,14 +1800,15 @@ public class JavaGenerator {
         
         String createMessage = getOption(ed.getOptions(), "java_create_message", null);        
         if( "true".equals(createMessage) ) {
-            p("public org.apache.activemq.protobuf.Message createMessage() {");
+            
+            p("public Object createBean() {");
             indent();
             p("switch (this) {");
             indent();
             for (EnumFieldDescriptor field : ed.getFields().values()) {
                 p("case "+field.getName()+":");
                 String type = constantToUCamelCase(field.getName());
-                p("   return new "+type+"();");
+                p("   return new "+type+"."+type+"Bean();");
             }
             p("default:");
             p("   return null;");
@@ -1497,8 +1817,34 @@ public class JavaGenerator {
             unindent();
             p("}");
             p();
+            
+            generateParseDelegate(ed, "parseUnframed", "org.apache.activemq.protobuf.Buffer", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
+            generateParseDelegate(ed, "parseFramed", "org.apache.activemq.protobuf.Buffer", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
+            generateParseDelegate(ed, "parseUnframed", "byte[]", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
+            generateParseDelegate(ed, "parseFramed", "byte[]", "org.apache.activemq.protobuf.InvalidProtocolBufferException");
+            generateParseDelegate(ed, "parseFramed", "org.apache.activemq.protobuf.CodedInputStream", "org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException");
+            generateParseDelegate(ed, "parseFramed", "java.io.InputStream", "org.apache.activemq.protobuf.InvalidProtocolBufferException, java.io.IOException");
         }
         
+        unindent();
+        p("}");
+        p();
+    }
+
+    private void generateParseDelegate(EnumDescriptor descriptor, String methodName, String inputType, String exceptions) {
+        p("public org.apache.activemq.protobuf.MessageBuffer " + methodName + "(" + inputType + " data) throws " + exceptions + " {");
+        indent();
+        p("switch (this) {");
+        indent();
+        for (EnumFieldDescriptor field : descriptor.getFields().values()) {
+            p("case "+field.getName()+":");
+            String type = constantToUCamelCase(field.getName());
+            p("   return "+type+"."+type+"Buffer."+methodName+"(data);");
+        }
+        p("default:");
+        p("   return null;");
+        unindent();
+        p("}");
         unindent();
         p("}");
         p();

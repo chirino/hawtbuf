@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.activemq.protobuf.compiler.JavaGenerator.CompilerException;
 import org.apache.activemq.protobuf.compiler.parser.ParseException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -61,6 +60,14 @@ public class ProtoMojo extends AbstractMojo {
      */
     private File outputDirectory;
 
+    
+    /**
+     * The type of generator to run.
+     * 
+     * @parameter default-value="default"
+     */
+    private String type;
+
     public void execute() throws MojoExecutionException {
 
         File[] files = sourceDirectory.listFiles(new FileFilter() {
@@ -78,9 +85,15 @@ public class ProtoMojo extends AbstractMojo {
         for (File file : recFiles) {
             try {
                 getLog().info("Compiling: "+file.getPath());
-                JavaGenerator generator = new JavaGenerator();
-                generator.setOut(outputDirectory);
-                generator.compile(file);
+                if( "default".equals(type) ) {
+                    JavaGenerator generator = new JavaGenerator();
+                    generator.setOut(outputDirectory);
+                    generator.compile(file);
+                } else if( "alt".equals(type) ) {
+                    AltJavaGenerator generator = new AltJavaGenerator();
+                    generator.setOut(outputDirectory);
+                    generator.compile(file);
+                }
             } catch (CompilerException e) {
                 getLog().error("Protocol Buffer Compiler failed with the following error(s):");
                 for (String error : e.getErrors() ) {

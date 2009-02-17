@@ -357,6 +357,9 @@ public final class CodedInputStream extends FilterInputStream {
      *             The end of the stream or the current limit was reached.
      */
     public Buffer readRawBytes(int size) throws IOException {
+        if( size == 0) {
+            return new Buffer(new byte[]{});
+        }
         if( this.pos+size > limit ) {
             throw new EOFException();
         }
