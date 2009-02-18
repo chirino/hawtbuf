@@ -450,13 +450,21 @@ public class AltJavaGenerator {
         p("if( frozen==null ) {");
         indent();
         p("frozen = new "+bufferClassName+"(bean);");
-        p("frozen.serializedSizeUnframed();");
+        p("assert deepFreeze();");
         unindent();
         p("}");
         p("return frozen;");
         unindent();
         p("}");
         p();
+        p("private boolean deepFreeze() {");
+        indent();
+        p("frozen.serializedSizeUnframed();");
+        p("return true;");
+        unindent();
+        p("}");
+        p();
+
     }
     
     /**

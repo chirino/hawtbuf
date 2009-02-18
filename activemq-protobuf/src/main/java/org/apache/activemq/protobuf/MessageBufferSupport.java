@@ -18,9 +18,7 @@ final public class MessageBufferSupport {
             CodedOutputStream output = new CodedOutputStream(baos);
             message.writeUnframed(output);
             Buffer rc = baos.toBuffer();
-            if( rc.length != size ) {
-                throw new IllegalStateException("Did not write as much data as expected.");
-            }
+            assert rc.length != size : "Did not write as much data as expected.";
             return rc;
         } catch (IOException e) {
             throw new RuntimeException("Serializing to a byte array threw an IOException " + "(should never happen).", e);
@@ -34,9 +32,7 @@ final public class MessageBufferSupport {
             CodedOutputStream output = new CodedOutputStream(baos);
             message.writeFramed(output);
             Buffer rc = baos.toBuffer();
-            if( rc.length != size ) {
-                throw new IllegalStateException("Did not write as much data as expected.");
-            }
+            assert rc.length==size : "Did not write as much data as expected.";
             return rc;
         } catch (IOException e) {
             throw new RuntimeException("Serializing to a byte array threw an IOException " + "(should never happen).", e);
