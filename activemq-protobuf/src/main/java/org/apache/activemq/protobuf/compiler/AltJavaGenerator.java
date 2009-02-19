@@ -22,10 +22,13 @@ import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED;
 import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_VARINT;
 import static org.apache.activemq.protobuf.WireFormat.makeTag;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -335,6 +338,8 @@ public class AltJavaGenerator {
         generateMethodMergeFromBean(m, className);
 
         generateMethodClear(m);
+        
+        generateReadWriteExternal(m);
 
         unindent();
         p("}");
@@ -437,6 +442,7 @@ public class AltJavaGenerator {
         p();
 
     }
+
 
     private void generateMethodFreeze(MessageDescriptor m, String bufferClassName) {
         p("public boolean frozen() {");
@@ -1297,6 +1303,251 @@ public class AltJavaGenerator {
         p("}");
         p();
     }
+    
+    private void generateReadWriteExternal(MessageDescriptor m) {
+        
+        p("public void readExternal(java.io.DataInput in) throws java.io.IOException {");
+        indent();
+        p("assert frozen==null : org.apache.activemq.protobuf.MessageBufferSupport.FORZEN_ERROR_MESSAGE;");
+        p("bean = this;");
+        p("frozen = null;");
+        
+        for (FieldDescriptor field : m.getFields().values()) {
+            String lname = lCamel(field.getName());
+            String type = javaType(field);
+            boolean repeated = field.getRule()==FieldDescriptor.REPEATED_RULE;
+    
+            // Create the fields..
+            if( repeated ) {
+                p("{");
+                indent();
+                p("int size = in.readShort();");
+                p("if( size>=0 ) {");
+                indent();
+                p("f_"+lname+" = new java.util.ArrayList<" + javaCollectionType(field) + ">(size);");
+                p("for(int i=0; i<size; i++) {");
+                indent();
+                if( field.isInteger32Type() ) {
+                    p("f_"+lname+".add(in.readInt());");
+                } else if( field.isInteger64Type() ) {
+                    p("f_"+lname+".add(in.readLong());");
+                } else if( field.getType() == FieldDescriptor.DOUBLE_TYPE ) {
+                    p("f_"+lname+".add(in.readDouble());");
+                } else if( field.getType() == FieldDescriptor.FLOAT_TYPE ) {
+                    p("f_"+lname+".add(in.readFloat());");
+                } else if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
+                    p("f_"+lname+".add(in.readBoolean());");
+                } else if( field.getType() == FieldDescriptor.STRING_TYPE ) {
+                    p("f_"+lname+".add(in.readUTF());");
+                } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
+                    p("byte b[] = new byte[in.readInt()];");
+                    p("in.readFully(b);");
+                    p("f_"+lname+".add(new org.apache.activemq.protobuf.Buffer(b));");
+                } else if (field.getTypeDescriptor().isEnum() ) {
+                    p("f_"+lname+".add(" + type + ".valueOf(in.readShort()));");
+                } else {
+                    p(""+type+"."+type+"Bean o = new "+type+"."+type+"Bean();");
+                    p("o.readExternal(in);");
+                    p("f_"+lname+".add(o);");
+                }
+                unindent();
+                p("}");
+                unindent();
+                p("} else {");
+                indent();
+                p("f_"+lname+" = null;");
+                unindent();
+                p("}");
+                unindent();
+                p("}");
+
+            } else {
+                if( field.isInteger32Type() ) {
+                    p("f_"+lname+" = in.readInt();");
+                    p("b_"+lname+" = true;");
+                } else if( field.isInteger64Type() ) {
+                    p("f_"+lname+" = in.readLong();");
+                    p("b_"+lname+" = true;");
+                } else if( field.getType() == FieldDescriptor.DOUBLE_TYPE ) {
+                    p("f_"+lname+" = in.readDouble();");
+                    p("b_"+lname+" = true;");
+                } else if( field.getType() == FieldDescriptor.FLOAT_TYPE ) {
+                    p("f_"+lname+" = in.readFloat();");
+                    p("b_"+lname+" = true;");
+                } else if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
+                    p("f_"+lname+" = in.readBoolean();");
+                    p("b_"+lname+" = true;");
+                } else if( field.getType() == FieldDescriptor.STRING_TYPE ) {
+                    p("if( in.readBoolean() ) {");
+                    indent();
+                    p("f_"+lname+" = in.readUTF();");
+                    p("b_"+lname+" = true;");
+                    unindent();
+                    p("} else {");
+                    indent();
+                    p("f_"+lname+" = null;");
+                    p("b_"+lname+" = false;");
+                    unindent();
+                    p("}");
+                } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
+                    p("{");
+                    indent();
+                    p("int size = in.readInt();");
+                    p("if( size>=0 ) {");
+                    indent();
+                    p("byte b[] = new byte[size];");
+                    p("in.readFully(b);");
+                    p("f_"+lname+" = new org.apache.activemq.protobuf.Buffer(b);");
+                    p("b_"+lname+" = true;");
+                    unindent();
+                    p("} else {");
+                    indent();
+                    p("f_"+lname+" = null;");
+                    p("b_"+lname+" = false;");
+                    unindent();
+                    p("}");
+                    unindent();
+                    p("}");
+                } else if (field.getTypeDescriptor().isEnum() ) {
+                    p("if( in.readBoolean() ) {");
+                    indent();
+                    p("f_"+lname+" = " + type + ".valueOf(in.readShort());");
+                    p("b_"+lname+" = true;");
+                    unindent();
+                    p("} else {");
+                    indent();
+                    p("f_"+lname+" = null;");
+                    p("b_"+lname+" = false;");
+                    unindent();
+                    p("}");
+                } else {
+                    p("if( in.readBoolean() ) {");
+                    indent();
+                    p(""+type+"."+type+"Bean o = new "+type+"."+type+"Bean();");
+                    p("o.readExternal(in);");
+                    p("f_"+lname+" = o;");
+                    unindent();
+                    p("} else {");
+                    indent();
+                    p("f_"+lname+" = null;");
+                    unindent();
+                    p("}");                    
+                }
+            }
+        }
+
+        unindent();
+        p("}");
+        p();
+        p("public void writeExternal(java.io.DataOutput out) throws java.io.IOException {");
+        indent();
+        for (FieldDescriptor field : m.getFields().values()) {
+            String lname = lCamel(field.getName());
+            boolean repeated = field.getRule()==FieldDescriptor.REPEATED_RULE;
+    
+            // Create the fields..
+            if( repeated ) {
+                p("if( bean.f_"+lname+"!=null ) {");
+                indent();
+                p("out.writeInt(bean.f_"+lname+".size());");
+                p("for(" + javaCollectionType(field) + " o : bean.f_"+lname+") {");
+                indent();
+                
+                if( field.isInteger32Type() ) {
+                    p("out.writeInt(o);");
+                } else if( field.isInteger64Type() ) {
+                    p("out.writeLong(o);");
+                } else if( field.getType() == FieldDescriptor.DOUBLE_TYPE ) {
+                    p("out.writeDouble(o);");
+                } else if( field.getType() == FieldDescriptor.FLOAT_TYPE ) {
+                    p("out.writeFloat(o);");
+                } else if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
+                    p("out.writeBoolean(o);");
+                } else if( field.getType() == FieldDescriptor.STRING_TYPE ) {
+                    p("out.writeUTF(o);");
+                } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
+                    p("out.writeInt(o.getLength());");
+                    p("out.write(o.getData(), o.getOffset(), o.getLength());");
+                } else if (field.getTypeDescriptor().isEnum() ) {
+                    p("out.writeShort(o.getNumber());");
+                } else {
+                    p("o.copy().writeExternal(out);");
+                }
+                unindent();
+                p("}");
+                p("} else {");
+                indent();
+                p("out.writeInt(-1);");
+                unindent();
+                p("}");
+
+            } else {
+                if( field.isInteger32Type() ) {
+                    p("out.writeInt(bean.f_"+lname+");");
+                } else if( field.isInteger64Type() ) {
+                    p("out.writeLong(bean.f_"+lname+");");
+                } else if( field.getType() == FieldDescriptor.DOUBLE_TYPE ) {
+                    p("out.writeDouble(bean.f_"+lname+");");
+                } else if( field.getType() == FieldDescriptor.FLOAT_TYPE ) {
+                    p("out.writeFloat(bean.f_"+lname+");");
+                } else if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
+                    p("out.writeBoolean(bean.f_"+lname+");");
+                } else if( field.getType() == FieldDescriptor.STRING_TYPE ) {
+                    p("if( bean.f_"+lname+"!=null ) {");
+                    indent();
+                    p("out.writeBoolean(true);");
+                    p("out.writeUTF(bean.f_"+lname+");");
+                    unindent();
+                    p("} else {");
+                    indent();
+                    p("out.writeBoolean(false);");
+                    unindent();
+                    p("}");
+                } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
+                    p("if( bean.f_"+lname+"!=null ) {");
+                    indent();
+                    p("out.writeInt(bean.f_"+lname+".getLength());");
+                    p("out.write(bean.f_"+lname+".getData(), bean.f_"+lname+".getOffset(), bean.f_"+lname+".getLength());");
+                    unindent();
+                    p("} else {");
+                    indent();
+                    p("out.writeInt(-1);");
+                    unindent();
+                    p("}");
+                } else if (field.getTypeDescriptor().isEnum() ) {
+                    p("if( bean.f_"+lname+"!=null ) {");
+                    indent();
+                    p("out.writeBoolean(true);");
+                    p("out.writeShort(bean.f_"+lname+".getNumber());");
+                    unindent();
+                    p("} else {");
+                    indent();
+                    p("out.writeBoolean(false);");
+                    unindent();
+                    p("}");
+                } else {
+                    p("if( bean.f_"+lname+"!=null ) {");
+                    indent();
+                    p("out.writeBoolean(true);");
+                    p("bean.f_"+lname+".copy().writeExternal(out);");
+                    unindent();
+                    p("} else {");
+                    indent();
+                    p("out.writeBoolean(false);");
+                    unindent();
+                    p("}");
+                }
+            }
+        }
+        
+        
+        
+        
+        unindent();
+        p("}");
+        
+    }
+    
 
 //    private void generateMethodAssertInitialized(MessageDescriptor m, String className) {
 //        
