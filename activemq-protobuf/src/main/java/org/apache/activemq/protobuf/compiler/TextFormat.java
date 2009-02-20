@@ -23,6 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.protobuf.UTF8Buffer;
 
 /** 
  * Provide ascii text parsing and formatting support for proto2 instances.
@@ -370,7 +371,7 @@ public final class TextFormat {
      * value.  Otherwise, throw a {@link ParseException}.
      */
     public String consumeString() throws ParseException {
-      return consumeBuffer().toStringUtf8();
+      return new UTF8Buffer(consumeBuffer()).toString();
     }
 
     /**
@@ -598,7 +599,7 @@ public final class TextFormat {
    * individually as a 3-digit octal escape.  Yes, it's weird.
    */
   static String escapeText(String input) {
-    return escapeBytes(new Buffer(input));
+    return escapeBytes(new UTF8Buffer(input));
   }
 
   /**
@@ -606,7 +607,7 @@ public final class TextFormat {
    * Two-digit hex escapes (starting with "\x") are also recognized.
    */
   static String unescapeText(String input) throws InvalidEscapeSequence {
-    return unescapeBytes(input).toStringUtf8();
+    return new UTF8Buffer(unescapeBytes(input)).toString();
   }
 
   /** Is this an octal digit? */

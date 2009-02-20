@@ -1096,14 +1096,18 @@ public class AltJavaGenerator {
 						indent();
 						p(setter + "(input.readString());");
 					} else if (field.getType() == FieldDescriptor.BYTES_TYPE) {
-						p("case "
-								+ makeTag(field.getTag(),
-										WIRETYPE_LENGTH_DELIMITED) + ":");
+						p("case "+ makeTag(field.getTag(), WIRETYPE_LENGTH_DELIMITED) + ":");
 						indent();
-						p(setter + "(input.readBytes());");
+			            String override = getOption(field.getOptions(), "java_override_type", null);
+			            if( "AsciiBuffer".equals(override) ) {
+                            p(setter + "(new org.apache.activemq.protobuf.AsciiBuffer(input.readBytes()));");
+			            } else if( "UTF8Buffer".equals(override) ) {
+                            p(setter + "(new org.apache.activemq.protobuf.UTF8Buffer(input.readBytes()));");
+			            } else {
+	                        p(setter + "(input.readBytes());");
+			            }						
 					} else if (field.getType() == FieldDescriptor.BOOL_TYPE) {
-						p("case " + makeTag(field.getTag(), WIRETYPE_VARINT)
-								+ ":");
+						p("case " + makeTag(field.getTag(), WIRETYPE_VARINT)+ ":");
 						indent();
 						p(setter + "(input.readBool());");
 					} else if (field.getType() == FieldDescriptor.DOUBLE_TYPE) {
@@ -1339,7 +1343,7 @@ public class AltJavaGenerator {
                 } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
                     p("byte b[] = new byte[in.readInt()];");
                     p("in.readFully(b);");
-                    p("f_"+lname+".add(new org.apache.activemq.protobuf.Buffer(b));");
+                    p("f_"+lname+".add(new "+type+"(b));");
                 } else if (field.getTypeDescriptor().isEnum() ) {
                     p("f_"+lname+".add(" + type + ".valueOf(in.readShort()));");
                 } else {
@@ -1394,7 +1398,7 @@ public class AltJavaGenerator {
                     indent();
                     p("byte b[] = new byte[size];");
                     p("in.readFully(b);");
-                    p("f_"+lname+" = new org.apache.activemq.protobuf.Buffer(b);");
+                    p("f_"+lname+" = new "+type+"(b);");
                     p("b_"+lname+" = true;");
                     unindent();
                     p("} else {");
@@ -1919,7 +1923,7 @@ public class AltJavaGenerator {
             if( field.isStringType() ) {
                 return asJavaString(defaultOption.getValue());
             } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
-                return "new org.apache.activemq.protobuf.Buffer("+asJavaString(defaultOption.getValue())+")";
+                return "new "+javaType(field)+"("+asJavaString(defaultOption.getValue())+")";
             } else if( field.isInteger32Type() ) {
                 int v;
                 if( field.getType() == FieldDescriptor.UINT32_TYPE ) {
@@ -2123,10 +2127,27 @@ public class AltJavaGenerator {
             return "java.lang.Float";
         }
         if( field.getType() == FieldDescriptor.STRING_TYPE ) {
-            return "java.lang.String";
+            // TODO: support handling string fields as buffers.
+//            String override = getOption(field.getOptions(), "java_override_type", null);
+//            if( "AsciiBuffer".equals(override) ) {
+//                return "org.apache.activemq.protobuf.AsciiBuffer";
+//            } else if( "UTF8Buffer".equals(override) ) {
+//                return "org.apache.activemq.protobuf.UTF8Buffer";
+//            } else if( "Buffer".equals(override) ) {
+//                return "org.apache.activemq.protobuf.Buffer";
+//            } else {
+                return "java.lang.String";
+//            }
         }
         if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
-            return "org.apache.activemq.protobuf.Buffer";
+            String override = getOption(field.getOptions(), "java_override_type", null);
+            if( "AsciiBuffer".equals(override) ) {
+                return "org.apache.activemq.protobuf.AsciiBuffer";
+            } else if( "UTF8Buffer".equals(override) ) {
+                return "org.apache.activemq.protobuf.UTF8Buffer";
+            } else {
+                return "org.apache.activemq.protobuf.Buffer";
+            }
         }
         if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
             return "java.lang.Boolean";
@@ -2150,10 +2171,27 @@ public class AltJavaGenerator {
             return "float";
         }
         if( field.getType() == FieldDescriptor.STRING_TYPE ) {
-            return "java.lang.String";
+            // TODO: support handling string fields as buffers.
+//            String override = getOption(field.getOptions(), "java_override_type", null);
+//            if( "AsciiBuffer".equals(override) ) {
+//                return "org.apache.activemq.protobuf.AsciiBuffer";
+//            } else if( "UTF8Buffer".equals(override) ) {
+//                return "org.apache.activemq.protobuf.UTF8Buffer";
+//            } else if( "Buffer".equals(override) ) {
+//                return "org.apache.activemq.protobuf.Buffer";
+//            } else {
+                return "java.lang.String";
+//            }
         }
         if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
-            return "org.apache.activemq.protobuf.Buffer";
+            String override = getOption(field.getOptions(), "java_override_type", null);
+            if( "AsciiBuffer".equals(override) ) {
+                return "org.apache.activemq.protobuf.AsciiBuffer";
+            } else if( "UTF8Buffer".equals(override) ) {
+                return "org.apache.activemq.protobuf.UTF8Buffer";
+            } else {
+                return "org.apache.activemq.protobuf.Buffer";
+            }
         }
         if( field.getType() == FieldDescriptor.BOOL_TYPE ) {
             return "boolean";
