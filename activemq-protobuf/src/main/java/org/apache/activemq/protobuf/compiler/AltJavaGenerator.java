@@ -22,13 +22,10 @@ import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_LENGTH_DELIMITED;
 import static org.apache.activemq.protobuf.WireFormat.WIRETYPE_VARINT;
 import static org.apache.activemq.protobuf.WireFormat.makeTag;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -1449,7 +1446,7 @@ public class AltJavaGenerator {
             if( repeated ) {
                 p("if( bean.f_"+lname+"!=null ) {");
                 indent();
-                p("out.writeInt(bean.f_"+lname+".size());");
+                p("out.writeShort(bean.f_"+lname+".size());");
                 p("for(" + javaCollectionType(field) + " o : bean.f_"+lname+") {");
                 indent();
                 
@@ -1475,9 +1472,10 @@ public class AltJavaGenerator {
                 }
                 unindent();
                 p("}");
+                unindent();
                 p("} else {");
                 indent();
-                p("out.writeInt(-1);");
+                p("out.writeShort(-1);");
                 unindent();
                 p("}");
 
