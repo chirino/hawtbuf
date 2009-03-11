@@ -21,7 +21,8 @@ public class EnumFieldDescriptor {
     private String name;
     private int value;
     private final EnumDescriptor parent;
-
+    private TypeDescriptor associatedType;
+    
     public EnumFieldDescriptor(EnumDescriptor parent) {
         this.parent = parent;
     }
@@ -44,6 +45,14 @@ public class EnumFieldDescriptor {
 
     public EnumDescriptor getParent() {
         return parent;
+    }
+
+    public TypeDescriptor getAssociatedType() {
+        return associatedType;
+    }
+
+    public void associate(TypeDescriptor associatedType) {
+        this.associatedType = associatedType;
     }
 
 }

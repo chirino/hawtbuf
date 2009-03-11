@@ -52,9 +52,56 @@ public class EnumDescriptor implements TypeDescriptor {
         return protoDescriptor;
     }
 
+    private String getOption(Map<String, OptionDescriptor> options, String optionName, String defaultValue) {
+        OptionDescriptor optionDescriptor = options.get(optionName);
+        if (optionDescriptor == null) {
+            return defaultValue;
+        }
+        return optionDescriptor.getValue();
+    }
+    
+    private String constantToUCamelCase(String name) {
+        boolean upNext=true;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if( Character.isJavaIdentifierPart(c) && Character.isLetterOrDigit(c)) {
+                if( upNext ) {
+                    c = Character.toUpperCase(c);
+                    upNext=false;
+                } else {
+                    c = Character.toLowerCase(c);
+                }
+                sb.append(c);
+            } else {
+                upNext=true;
+            }
+        }
+        return sb.toString();
+    }
+    
     public void validate(List<String> errors) {
-        // TODO Auto-generated method stub
-        
+        String createMessage = getOption(getOptions(), "java_create_message", null);        
+        if( "true".equals(createMessage) ) {
+            for (EnumFieldDescriptor field : getFields().values()) {
+                String type = constantToUCamelCase(field.getName());
+                
+                TypeDescriptor typeDescriptor=null;
+                // Find the type def for that guy..
+                if( parent!=null ) {
+                    typeDescriptor = parent.getType(type);
+                }
+                if( typeDescriptor == null ) {
+                    typeDescriptor = protoDescriptor.getType(type);
+                }
+                if( typeDescriptor == null ) {
+                    errors.add("ENUM constant '"+field.getName()+"' did not find expected associated message: "+type);
+                } else {
+                    field.associate(typeDescriptor);
+                    typeDescriptor.associate(field);
+                }
+            }
+        }
     }
 
     public MessageDescriptor getParent() {
@@ -79,6 +126,10 @@ public class EnumDescriptor implements TypeDescriptor {
 
     public void setOptions(Map<String, OptionDescriptor> options) {
         this.options = options;
+    }
+
+    public void associate(EnumFieldDescriptor desc) {
+        throw new RuntimeException("not supported.");
     }
 
 

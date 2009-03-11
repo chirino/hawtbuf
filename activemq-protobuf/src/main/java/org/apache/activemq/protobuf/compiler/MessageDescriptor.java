@@ -35,6 +35,8 @@ public class MessageDescriptor implements TypeDescriptor {
     private final ProtoDescriptor protoDescriptor;
     private List<MessageDescriptor> extendsList = new ArrayList<MessageDescriptor>();
     private Map<String, OptionDescriptor> options = new LinkedHashMap<String, OptionDescriptor>();
+    private List<EnumFieldDescriptor> associatedEnumFieldDescriptors = new ArrayList<EnumFieldDescriptor>();
+    
     private final MessageDescriptor parent;
 	private MessageDescriptor baseType;
 
@@ -182,5 +184,13 @@ public class MessageDescriptor implements TypeDescriptor {
 	public MessageDescriptor getBaseType() {
 		return baseType;
 	}
+
+    public void associate(EnumFieldDescriptor desc) {
+        associatedEnumFieldDescriptors.add(desc);
+    }
+
+    public List<EnumFieldDescriptor> getAssociatedEnumFieldDescriptors() {
+        return associatedEnumFieldDescriptors;
+    }
 
 }

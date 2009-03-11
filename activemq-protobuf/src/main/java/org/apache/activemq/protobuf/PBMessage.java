@@ -14,17 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.protobuf.compiler;
+package org.apache.activemq.protobuf;
 
-public interface TypeDescriptor {
-    public String getName();
-    
-    public String getQName();
-
-    public ProtoDescriptor getProtoDescriptor();
-
-    public boolean isEnum();
-
-    public void associate(EnumFieldDescriptor desc);
-    
+public interface PBMessage <Bean, Buffer extends MessageBuffer>{
+    public Bean copy();
+    public boolean frozen();
+    public Buffer freeze();
 }

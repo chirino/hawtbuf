@@ -247,8 +247,15 @@ public class AltJavaGenerator {
         if( multipleFiles && m.getParent()==null ) {
             staticOption="";
         }
-                
-        p(staticOption+"public interface " + className +" {");
+
+        String extendsClause = " extends org.apache.activemq.protobuf.PBMessage<"+className+"."+beanClassName+", "+className+"."+bufferClassName+">";
+        for (EnumFieldDescriptor enumFeild : m.getAssociatedEnumFieldDescriptors()) {
+            String name = uCamel(enumFeild.getParent().getName());
+            name = name+"."+name+"Creatable";
+            extendsClause += ", "+name; 
+        }
+        
+        p(staticOption+"public interface " + className + extendsClause +" {");
         p();
         indent();
         
@@ -337,6 +344,16 @@ public class AltJavaGenerator {
         generateMethodClear(m);
         
         generateReadWriteExternal(m);
+        
+        for (EnumFieldDescriptor enumFeild : m.getAssociatedEnumFieldDescriptors()) {
+            String enumName = uCamel(enumFeild.getParent().getName());
+            p("public "+enumName+" to"+enumName+"() {");
+            indent();
+            p("return "+enumName+"."+enumFeild.getName()+";");
+            unindent();
+            p("}");
+            p();            
+        }        
 
         unindent();
         p("}");
@@ -425,6 +442,22 @@ public class AltJavaGenerator {
         
         generateBufferEquals(m, bufferClassName);
 
+        p("public boolean frozen() {");
+        indent();
+        p("return true;");
+        unindent();
+        p("}");
+
+        for (EnumFieldDescriptor enumFeild : m.getAssociatedEnumFieldDescriptors()) {
+            String enumName = uCamel(enumFeild.getParent().getName());
+            p("public "+enumName+" to"+enumName+"() {");
+            indent();
+            p("return "+enumName+"."+enumFeild.getName()+";");
+            unindent();
+            p("}");
+            p();            
+        }        
+        
         unindent();
         p("}");
         p();
@@ -1542,11 +1575,9 @@ public class AltJavaGenerator {
             }
         }
         
-        
-        
-        
         unindent();
         p("}");
+        p();            
         
     }
     
@@ -2062,13 +2093,20 @@ public class AltJavaGenerator {
         String createMessage = getOption(ed.getOptions(), "java_create_message", null);        
         if( "true".equals(createMessage) ) {
             
-            p("public Object createBean() {");
+            p("public interface "+uname+"Creatable {");
+            indent();
+            p(""+uname+" to"+uname+"();");
+            unindent();
+            p("}");
+            p();
+            
+            p("public "+uname+"Creatable createBean() {");
             indent();
             p("switch (this) {");
             indent();
             for (EnumFieldDescriptor field : ed.getFields().values()) {
                 p("case "+field.getName()+":");
-                String type = constantToUCamelCase(field.getName());
+                String type = field.getAssociatedType().getName();
                 p("   return new "+type+"."+type+"Bean();");
             }
             p("default:");
