@@ -359,7 +359,7 @@ public class AltJavaGenerator {
         p("}");
         p();
 
-        p("static public final class "+bufferClassName+" implements org.apache.activemq.protobuf.MessageBuffer, "+className+" {");
+        p("static public final class "+bufferClassName+" implements org.apache.activemq.protobuf.MessageBuffer<"+className+"."+beanClassName+", "+className+"."+bufferClassName+">, "+className+" {");
         p();
         indent();
         
