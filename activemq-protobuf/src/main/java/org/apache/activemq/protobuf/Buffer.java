@@ -19,7 +19,7 @@ package org.apache.activemq.protobuf;
 
 import java.util.List;
 
-public class Buffer {
+public class Buffer implements Comparable<Buffer> {
 
     final public byte[] data;
     final public int offset;
@@ -176,6 +176,33 @@ public class Buffer {
     @Deprecated
     public String toStringUtf8() {
         return UTF8Buffer.decode(this);
+    }
+
+    public int compareTo(Buffer o) {
+        int minLength = Math.min(length, o.length);
+        if (offset == o.offset) {
+            int pos = offset;
+            int limit = minLength + offset;
+            while (pos < limit) {
+                byte b1 = data[pos];
+                byte b2 = o.data[pos];
+                if (b1 != b2) {
+                    return b1 - b2;
+                }
+                pos++;
+            }
+        } else {
+            int offset1 = offset;
+            int offset2 = o.offset;
+            while ( minLength-- != 0) {
+                byte b1 = data[offset1++];
+                byte b2 = o.data[offset2++];
+                if (b1 != b2) {
+                    return b1 - b2;
+                }
+            }
+        }
+        return length - o.length;
     }
         
 }

@@ -5,6 +5,7 @@ import java.io.UnsupportedEncodingException;
 final public class UTF8Buffer extends Buffer {
 
     int hashCode;
+    String value; 
     
     public UTF8Buffer(Buffer other) {
         super(other);
@@ -31,7 +32,16 @@ final public class UTF8Buffer extends Buffer {
 
     public String toString()
     {
-        return decode(this);
+        if( value==null ) {
+            value = decode(this); 
+        }
+        return value;
+    }
+    
+    @Override
+    public int compareTo(Buffer other) {
+        // Do a char comparison.. not a byte for byte comparison.
+        return toString().compareTo(other.toString());
     }
 
     @Override
