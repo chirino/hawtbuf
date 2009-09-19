@@ -41,7 +41,6 @@
     <dependency>
       <groupId>org.apache.activemq.protobuf</groupId>
       <artifactId>activemq-protobuf</artifactId>
-      <version>1.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
 
@@ -65,7 +64,6 @@
       <plugin>
         <groupId>org.apache.activemq.protobuf</groupId>
         <artifactId>activemq-protobuf</artifactId>
-        <version>1.0-SNAPSHOT</version>
          <executions>
           <execution>
             <goals>
