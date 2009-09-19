@@ -324,6 +324,11 @@
               <test>false</test>
             </configuration>
           </plugin>
+          <plugin>
+            <groupId>org.apache.activemq.protobuf</groupId>
+            <artifactId>activemq-protobuf</artifactId>
+            <version>${version}</version>
+          </plugin>
         </plugins>
       </build>
     </profile>
