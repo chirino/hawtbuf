@@ -49,12 +49,19 @@
       <post>dev@activemq.apache.org</post>
     </mailingList>
   </mailingLists>
+  
+  <properties>
+    <siteId>protobuf</siteId>
+    <!-- base url for site deployment.  See distribution management for full url.  Override this in settings.xml for staging -->
+    <staging.siteURL>scp://people.apache.org/x1/www/activemq.apache.org</staging.siteURL>
+  </properties>
+  
   <distributionManagement>
     <site>
       <!-- this needs to match a server in your settings.xml with upload settings -->
-      <id>activemq-website</id>
+      <id>protobuf-website</id>
       <!-- set the staging.siteURL in your ~/.m2/settings.xml in a release or other profile -->
-      <url>${staging.siteURL}/${siteId}/maven/${activemq-version}</url>
+      <url>${staging.siteURL}/${siteId}/maven/${project.version}</url>
       <!--<url>${site-repo-url}</url>-->
     </site>
   </distributionManagement>
@@ -70,89 +77,50 @@
     <url>http://svn.apache.org/viewvc/activemq/activemq-protobuf/trunk/</url>
   </scm>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.4</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- internal protobuf dependencies -->
+      <dependency>
+        <groupId>org.apache.activemq.protobuf</groupId>
+        <artifactId>activemq-protobuf</artifactId>
+        <version>${version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.activemq.protobuf</groupId>
+        <artifactId>activemq-protobuf-test</artifactId>
+        <version>${version}</version>
+      </dependency>
+
+
+    </dependencies>
+  </dependencyManagement>
+
   <build>
     <pluginManagement>
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>2.0.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-eclipse-plugin</artifactId>
-          <version>2.4</version>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>2.2-beta-4</version>
           <configuration>
-            <downloadSources>true</downloadSources>
-            <downloadJavadocs>true</downloadJavadocs>
+            <tarLongFileMode>gnu</tarLongFileMode>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-gpg-plugin</artifactId>
-          <version>1.0-alpha-4</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>sign</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-install-plugin</artifactId>
-          <version>2.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>2.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <version>2.4</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-release-plugin</artifactId>
-          <version>2.0-beta-7</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.0</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>process</goal>
-              </goals>
-              <configuration>
-                <properties>
-                  <projectName>${projectName}</projectName>
-                </properties>
-                <resourceBundles>
-                  <resourceBundle>org.apache:apache-jar-resource-bundle:1.4</resourceBundle>
-                </resourceBundles>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-          <version>2.0.4</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-stage-plugin</artifactId>
-          <version>1.0-alpha-1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.2</version>
+          <artifactId>maven-eclipse-plugin</artifactId>
+          <version>2.7</version>
+          <configuration>
+            <downloadSources>true</downloadSources>
+            <downloadJavadocs>true</downloadJavadocs>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
@@ -160,9 +128,9 @@
           <version>1.0.0</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.geronimo.genesis.plugins</groupId>
-          <artifactId>tools-maven-plugin</artifactId>
-          <version>1.4</version>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>ianal-maven-plugin</artifactId>
+          <version>1.0-alpha-1</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -210,7 +178,45 @@
         <configuration>
           <source>1.5</source>
           <target>1.5</target>
+          <optimize>true</optimize>
+          <debug>true</debug>
+          <showDeprecation>true</showDeprecation>
+          <showWarnings>true</showWarnings>
         </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>[2.0.10,)</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>ianal-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>verify-legal-files</goal>
+            </goals>
+            <configuration>
+              <strict>true</strict>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -218,6 +224,11 @@
         <configuration>
           <forkMode>once</forkMode>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <argLine>-enableassertions</argLine>
+          <failIfNoTests>false</failIfNoTests>
+          <includes>
+            <include>**/*Test.java</include>
+          </includes>
         </configuration>
       </plugin>
       <plugin>
@@ -232,35 +243,6 @@
         <artifactId>rat-maven-plugin</artifactId>
       </plugin>
 
-      <plugin>
-        <groupId>org.apache.geronimo.genesis.plugins</groupId>
-        <artifactId>tools-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>verify-legal-files</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>verify-legal-files</goal>
-            </goals>
-            <configuration>
-              <!-- Fail the build if no legal files were found -->
-              <strict>true</strict>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-stage-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-      </plugin>
     </plugins>
   </build>
   <reporting>
@@ -294,4 +276,57 @@
       </plugin>
     </plugins>
   </reporting>
+  
+  <profiles>
+    <profile>
+      <id>apache-release</id>
+      <activation>
+        <property>
+          <name>apache-release</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <phase>package</phase>
+                <configuration>
+                  <runOnlyAtExecutionRoot>true</runOnlyAtExecutionRoot>
+                  <descriptorRefs>
+                    <descriptorRef>
+                      source-release
+                    </descriptorRef>
+                  </descriptorRefs>
+                </configuration>
+              </execution>
+            </executions>
+            <dependencies>
+              <dependency>
+                <!-- apache version not yet released -->
+                <!--<groupId>org.apache</groupId>-->
+                <groupId>org.apache.geronimo.genesis</groupId>
+                <artifactId>apache-source-release-assembly-descriptor</artifactId>
+                <!-- apache version not yet known -->
+                <version>2.0</version>
+              </dependency>
+            </dependencies>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <test>false</test>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+  
 </project>
