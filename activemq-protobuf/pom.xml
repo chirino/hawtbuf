@@ -21,12 +21,12 @@
   <parent>
     <groupId>org.apache.activemq.protobuf</groupId>
     <artifactId>activemq-protobuf-pom</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.0</version>
   </parent>
 
   <groupId>org.apache.activemq.protobuf</groupId>
   <artifactId>activemq-protobuf</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.0</version>
   <packaging>maven-plugin</packaging>
   
   <name>ActiveMQ Protocol Buffers Implementation and Compiler</name>
