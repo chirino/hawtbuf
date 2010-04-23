@@ -1,8 +1,8 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
 import java.util.StringTokenizer;
 
-import org.apache.activemq.amqp.generator.jaxb.schema.Descriptor;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Descriptor;
 
 public class AmqpDescriptor {
 

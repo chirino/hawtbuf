@@ -1,12 +1,12 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
-import static org.apache.activemq.amqp.generator.Utils.capFirst;
-import static org.apache.activemq.amqp.generator.Utils.padHex;
-import static org.apache.activemq.amqp.generator.Utils.tab;
-import static org.apache.activemq.amqp.generator.Utils.toJavaConstant;
-import static org.apache.activemq.amqp.generator.Utils.toJavaName;
-import static org.apache.activemq.amqp.generator.Utils.writeJavaComment;
-import static org.apache.activemq.amqp.generator.Utils.writeJavaCopyWrite;
+import static org.fusesource.hawtbuf.amqp.Utils.capFirst;
+import static org.fusesource.hawtbuf.amqp.Utils.padHex;
+import static org.fusesource.hawtbuf.amqp.Utils.tab;
+import static org.fusesource.hawtbuf.amqp.Utils.toJavaConstant;
+import static org.fusesource.hawtbuf.amqp.Utils.toJavaName;
+import static org.fusesource.hawtbuf.amqp.Utils.writeJavaComment;
+import static org.fusesource.hawtbuf.amqp.Utils.writeJavaCopyWrite;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -17,15 +17,15 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.TreeSet;
 
-import org.apache.activemq.amqp.generator.TypeRegistry.JavaTypeMapping;
-import org.apache.activemq.amqp.generator.jaxb.schema.Amqp;
-import org.apache.activemq.amqp.generator.jaxb.schema.Choice;
-import org.apache.activemq.amqp.generator.jaxb.schema.Descriptor;
-import org.apache.activemq.amqp.generator.jaxb.schema.Doc;
-import org.apache.activemq.amqp.generator.jaxb.schema.Encoding;
-import org.apache.activemq.amqp.generator.jaxb.schema.Field;
-import org.apache.activemq.amqp.generator.jaxb.schema.Section;
-import org.apache.activemq.amqp.generator.jaxb.schema.Type;
+import org.fusesource.hawtbuf.amqp.TypeRegistry.JavaTypeMapping;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Amqp;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Choice;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Descriptor;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Doc;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Encoding;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Field;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Section;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Type;
 
 public class AmqpClass {
 
@@ -88,9 +88,9 @@ public class AmqpClass {
                 AmqpEncoding encoding = new AmqpEncoding();
                 encoding.parseFromEncoding((Encoding) typeAttribute);
                 encodings.add(encoding);
-            } else if (typeAttribute instanceof org.apache.activemq.amqp.generator.jaxb.schema.Exception) {
+            } else if (typeAttribute instanceof org.fusesource.hawtbuf.amqp.jaxb.schema.Exception) {
                 exception = new AmqpException();
-                exception.parseFromException((org.apache.activemq.amqp.generator.jaxb.schema.Exception) typeAttribute);
+                exception.parseFromException((org.fusesource.hawtbuf.amqp.jaxb.schema.Exception) typeAttribute);
             }
         }
 

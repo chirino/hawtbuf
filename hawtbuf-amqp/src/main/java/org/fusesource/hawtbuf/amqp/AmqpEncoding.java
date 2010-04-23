@@ -1,6 +1,6 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
-import org.apache.activemq.amqp.generator.jaxb.schema.Encoding;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Encoding;
 
 public class AmqpEncoding {
 

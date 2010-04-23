@@ -1,6 +1,6 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
-import org.apache.activemq.amqp.generator.jaxb.schema.Exception;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Exception;
 
 public class AmqpException {
 

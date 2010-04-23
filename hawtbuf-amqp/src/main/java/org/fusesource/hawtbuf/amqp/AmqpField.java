@@ -1,12 +1,12 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
-import static org.apache.activemq.amqp.generator.Utils.toJavaName;
+import static org.fusesource.hawtbuf.amqp.Utils.toJavaName;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
 
-import org.apache.activemq.amqp.generator.jaxb.schema.Doc;
-import org.apache.activemq.amqp.generator.jaxb.schema.Field;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Doc;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Field;
 
 public class AmqpField {
 

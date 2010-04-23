@@ -1,8 +1,8 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
 import java.util.LinkedList;
 
-import org.apache.activemq.amqp.generator.jaxb.schema.Choice;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Choice;
 
 public class AmqpChoice {
 

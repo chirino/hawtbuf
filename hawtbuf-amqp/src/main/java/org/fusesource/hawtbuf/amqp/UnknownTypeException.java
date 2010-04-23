@@ -1,4 +1,4 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
 public class UnknownTypeException extends Exception {
 

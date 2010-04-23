@@ -1,11 +1,11 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.activemq.amqp.generator.jaxb.schema.*;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.*;
 
 public class AmqpDoc {
 

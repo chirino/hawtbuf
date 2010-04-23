@@ -1,12 +1,12 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
-import static org.apache.activemq.amqp.generator.Utils.capFirst;
-import static org.apache.activemq.amqp.generator.Utils.javaPackageOf;
-import static org.apache.activemq.amqp.generator.Utils.tab;
-import static org.apache.activemq.amqp.generator.Utils.toJavaConstant;
-import static org.apache.activemq.amqp.generator.Utils.toJavaName;
-import static org.apache.activemq.amqp.generator.Utils.writeJavaComment;
-import static org.apache.activemq.amqp.generator.Utils.writeJavaCopyWrite;
+import static org.fusesource.hawtbuf.amqp.Utils.capFirst;
+import static org.fusesource.hawtbuf.amqp.Utils.javaPackageOf;
+import static org.fusesource.hawtbuf.amqp.Utils.tab;
+import static org.fusesource.hawtbuf.amqp.Utils.toJavaConstant;
+import static org.fusesource.hawtbuf.amqp.Utils.toJavaName;
+import static org.fusesource.hawtbuf.amqp.Utils.writeJavaComment;
+import static org.fusesource.hawtbuf.amqp.Utils.writeJavaCopyWrite;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -25,42 +25,44 @@ import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.Source;
 import javax.xml.transform.sax.SAXSource;
 
-import org.apache.activemq.amqp.generator.TypeRegistry.JavaTypeMapping;
-import org.apache.activemq.amqp.generator.jaxb.schema.Amqp;
-import org.apache.activemq.amqp.generator.jaxb.schema.Definition;
-import org.apache.activemq.amqp.generator.jaxb.schema.Section;
-import org.apache.activemq.amqp.generator.jaxb.schema.Type;
+import org.fusesource.hawtbuf.amqp.TypeRegistry.JavaTypeMapping;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Amqp;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Definition;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Section;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Type;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
 public class Generator {
 
-    private String[] inputFiles;
-    private String outputDirectory;
-    private String sourceDirectory;
-    private String packagePrefix = "org.apache.activemq.amqp.protocol";
+    private static final String SLASH = File.separator;
+
+    private File[] inputFiles;
+    private File outputDirectory;
+    private File sourceDirectory;
+    private String packagePrefix = "org.fusesource.hawtbuf.amqp.protocol";
 
     public static final HashSet<String> CONTROLS = new HashSet<String>();
     public static final HashSet<String> COMMANDS = new HashSet<String>();
     public static final LinkedHashMap<String, AmqpDefinition> DEFINITIONS = new LinkedHashMap<String, AmqpDefinition>();
 
-    public String[] getInputFile() {
+    public File[] getInputFile() {
         return inputFiles;
     }
 
-    public void setInputFiles(String... inputFiles) {
+    public void setInputFiles(File... inputFiles) {
         this.inputFiles = inputFiles;
     }
 
-    public String getOutputDirectory() {
+    public File getOutputDirectory() {
         return outputDirectory;
     }
 
-    public void setOutputDirectory(String outputDirectory) {
+    public void setOutputDirectory(File outputDirectory) {
         this.outputDirectory = outputDirectory;
     }
 
-    public void setSourceDirectory(String sourceDirectory) {
+    public void setSourceDirectory(File sourceDirectory) {
         this.sourceDirectory = sourceDirectory;
     }
 
@@ -76,10 +78,10 @@ public class Generator {
         TypeRegistry.init(this);
         JAXBContext jc = JAXBContext.newInstance(Amqp.class.getPackage().getName());
 
-        for (String inputFile : inputFiles) {
+        for (File inputFile : inputFiles) {
 
             // Firstly, scan the file for command and control defs:
-            BufferedReader reader = new BufferedReader(new FileReader(new File(inputFile)));
+            BufferedReader reader = new BufferedReader(new FileReader(inputFile));
             String line = reader.readLine();
             while (line != null) {
                 line = line.trim();
@@ -106,7 +108,11 @@ public class Generator {
             parserFactory = SAXParserFactory.newInstance();
             parserFactory.setNamespaceAware(false);
             XMLReader xmlreader = parserFactory.newSAXParser().getXMLReader();
-            Source er = new SAXSource(xmlreader, new InputSource(inputFile));
+
+            reader = new BufferedReader(new FileReader(inputFile));
+            Source er = new SAXSource(xmlreader, new InputSource(reader));
+            reader.close();
+
             // Amqp amqp = (Amqp) unmarshaller.unmarshal(new StreamSource(new
             // File(inputFile)), Amqp.class).getValue();
             Amqp amqp = (Amqp) unmarshaller.unmarshal(er);
@@ -128,29 +134,31 @@ public class Generator {
             }
         }
 
-        // Copy handcoded:
-        String handCodedSource = "org/apache/activemq/amqp/generator/handcoded";
-        String outputPackage = packagePrefix.replace(".", File.separator);
-        File sourceDir = new File(sourceDirectory + File.separator + handCodedSource);
-        for (File javaFile : Utils.findFiles(sourceDir)) {
-            if (!javaFile.getName().endsWith(".java")) {
-                continue;
-            }
-            javaFile.setWritable(true);
-            BufferedReader reader = new BufferedReader(new FileReader(javaFile));
-            File out = new File(outputDirectory + File.separator + outputPackage + File.separator + javaFile.getCanonicalPath().substring((int) sourceDir.getCanonicalPath().length()));
-            out.getParentFile().mkdirs();
-            String line = reader.readLine();
-            BufferedWriter writer = new BufferedWriter(new FileWriter(out));
+        if( sourceDirectory!=null ) {
+            // Copy handcoded:
+            String handCodedSource = "org/apache/activemq/amqp/generator/handcoded";
+            String outputPackage = packagePrefix.replace(".", SLASH);
+            File sourceDir = new File(sourceDirectory + SLASH + handCodedSource);
+            for (File javaFile : Utils.findFiles(sourceDir)) {
+                if (!javaFile.getName().endsWith(".java")) {
+                    continue;
+                }
+                javaFile.setWritable(true);
+                BufferedReader reader = new BufferedReader(new FileReader(javaFile));
+                File out = new File(outputDirectory, outputPackage + SLASH + javaFile.getCanonicalPath().substring((int) sourceDir.getCanonicalPath().length()));
+                out.getParentFile().mkdirs();
+                String line = reader.readLine();
+                BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 
-            while (line != null) {
-                line = line.replace("org.apache.activemq.amqp.generator.handcoded", packagePrefix);
-                writer.write(line);
-                writer.newLine();
-                line = reader.readLine();
+                while (line != null) {
+                    line = line.replace("org.apache.activemq.amqp.generator.handcoded", packagePrefix);
+                    writer.write(line);
+                    writer.newLine();
+                    line = reader.readLine();
+                }
+                writer.flush();
+                writer.close();
             }
-            writer.flush();
-            writer.close();
         }
 
         // Generate Types:
@@ -167,8 +175,8 @@ public class Generator {
     }
 
     private void generateCommandHandler() throws IOException {
-        String outputPackage = packagePrefix.replace(".", File.separator);
-        File out = new File(outputDirectory + File.separator + outputPackage + File.separator + "AmqpCommandHandler.java");
+        String outputPackage = packagePrefix.replace(".", SLASH);
+        File out = new File(outputDirectory, outputPackage + SLASH + "AmqpCommandHandler.java");
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 
@@ -200,8 +208,8 @@ public class Generator {
     }
 
     private void generateDefinitions() throws IOException {
-        String outputPackage = packagePrefix.replace(".", File.separator);
-        File out = new File(outputDirectory + File.separator + outputPackage + File.separator + "Definitions.java");
+        String outputPackage = packagePrefix.replace(".", SLASH);
+        File out = new File(outputDirectory, outputPackage + SLASH + "Definitions.java");
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 
@@ -228,7 +236,7 @@ public class Generator {
 
     private void generateMarshallerInterface() throws IOException, UnknownTypeException {
         String outputPackage = new String(packagePrefix + ".marshaller");
-        File out = new File(outputDirectory + File.separator + outputPackage.replace(".", File.separator) + File.separator + "AmqpMarshaller.java");
+        File out = new File(outputDirectory, outputPackage.replace(".", SLASH) + SLASH + "AmqpMarshaller.java");
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 
@@ -289,7 +297,7 @@ public class Generator {
     }
 
     private void generateMarshaller() throws IOException, UnknownTypeException {
-        File out = new File(outputDirectory + File.separator + getMarshallerPackage().replace(".", File.separator) + File.separator + "AmqpMarshaller.java");
+        File out = new File(outputDirectory, getMarshallerPackage().replace(".", SLASH) + SLASH + "AmqpMarshaller.java");
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 
@@ -498,7 +506,7 @@ public class Generator {
     private void generatePrimitiveEncoderInterface() throws IOException, UnknownTypeException {
 
         String outputPackage = getMarshallerPackage();
-        File out = new File(outputDirectory + File.separator + outputPackage.replace(".", File.separator) + File.separator + "PrimitiveEncoder.java");
+        File out = new File(outputDirectory, outputPackage.replace(".", SLASH) + SLASH + "PrimitiveEncoder.java");
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 
@@ -579,7 +587,7 @@ public class Generator {
     private void generateTypeFactory() throws IOException, UnknownTypeException {
 
         String outputPackage = getPackagePrefix() + ".types";
-        File out = new File(outputDirectory + File.separator + outputPackage.replace(".", File.separator) + File.separator + "TypeFactory.java");
+        File out = new File(outputDirectory, outputPackage.replace(".", SLASH) + SLASH + "TypeFactory.java");
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 

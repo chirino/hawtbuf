@@ -1,9 +1,9 @@
-package org.apache.activemq.amqp.generator;
+package org.fusesource.hawtbuf.amqp;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
 
-import org.apache.activemq.amqp.generator.jaxb.schema.Definition;
+import org.fusesource.hawtbuf.amqp.jaxb.schema.Definition;
 
 public class AmqpDefinition {
 
