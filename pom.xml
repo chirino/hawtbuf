@@ -72,8 +72,8 @@
 
   <modules>
     <module>hawtbuf-core</module>
-    <module>activemq-protobuf</module>
-    <module>activemq-protobuf-test</module>
+    <module>hawtbuf-proto</module>
+    <module>hawtbuf-proto-tests</module>
   </modules>
 
   <scm>
