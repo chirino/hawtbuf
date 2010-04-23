@@ -18,6 +18,9 @@ package org.apache.activemq.protobuf;
 
 import java.io.IOException;
 
+import org.apache.activemq.util.buffer.Buffer;
+
+
 abstract public class DeferredDecodeMessage<T> extends BaseMessage<T> {
 
     protected Buffer encodedForm;

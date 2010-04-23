@@ -54,6 +54,12 @@
       <version>2.0</version>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.apache.ant</groupId>
+      <artifactId>ant</artifactId>
+      <version>1.7.1</version>
+      <scope>provided</scope>    
+    </dependency>
     
     <dependency>
       <groupId>junit</groupId>
@@ -61,6 +67,7 @@
       <version>4.4</version>
       <scope>test</scope>
     </dependency>
+    
   </dependencies>
   
   <build>
@@ -87,6 +94,7 @@
          <executions>
           <execution>
             <id>javacc</id>
+            <phase>generate-sources</phase>
             <goals>
               <goal>javacc</goal>
             </goals>

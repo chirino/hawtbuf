@@ -28,7 +28,7 @@ import java.io.RandomAccessFile;
 
 import junit.framework.Assert;
 
-import org.apache.activemq.protobuf.Buffer;
+import org.apache.activemq.util.buffer.Buffer;
 
 import protobuf_unittest.UnittestProto.ForeignEnum;
 import protobuf_unittest.UnittestProto.ForeignMessage;
@@ -49,7 +49,7 @@ import com.google.protobuf.test.UnittestImport.ImportMessage;
 class TestUtil {
   private TestUtil() {}
 
-  /** Helper to convert a String to ByteSequence. */
+  /** Helper to convert a String to Buffer. */
   private static Buffer toBytes(String str) {
     try {
       return new Buffer(str.getBytes("UTF-8"));
@@ -729,7 +729,7 @@ class TestUtil {
    * {@link com.google.testing.util.TestUtil#getDefaultSrcDir}.
    */
   public static String readTextFromFile(String filePath) {
-    return readBytesFromFile(filePath).toStringUtf8();
+    return readBytesFromFile(filePath).utf8().toString();
   }
 
   private static File getTestDataDir() {

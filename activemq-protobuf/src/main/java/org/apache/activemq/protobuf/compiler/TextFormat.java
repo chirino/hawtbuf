@@ -22,8 +22,8 @@ import java.nio.CharBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.activemq.protobuf.Buffer;
-import org.apache.activemq.protobuf.UTF8Buffer;
+import org.apache.activemq.util.buffer.Buffer;
+import org.apache.activemq.util.buffer.UTF8Buffer;
 
 /** 
  * Provide ascii text parsing and formatting support for proto2 instances.
@@ -481,7 +481,7 @@ public final class TextFormat {
   static String escapeBytes(Buffer input) {
     StringBuilder builder = new StringBuilder(input.getLength());
     for (int i = 0; i < input.getLength(); i++) {
-      byte b = input.byteAt(i);
+      byte b = input.get(i);
       switch (b) {
         // Java does not recognize \a or \v, apparently.
         case 0x07: builder.append("\\a" ); break;

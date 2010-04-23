@@ -37,7 +37,7 @@
   </description>
 
   <prerequisites>
-    <maven>2.0.8</maven>
+    <maven>2.0.10</maven>
   </prerequisites>
 
   <url>http://activemq.apache.org</url>
@@ -314,11 +314,6 @@
             <configuration>
               <test>false</test>
             </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.activemq.protobuf</groupId>
-            <artifactId>activemq-protobuf</artifactId>
-            <version>${version}</version>
           </plugin>
         </plugins>
       </build>
