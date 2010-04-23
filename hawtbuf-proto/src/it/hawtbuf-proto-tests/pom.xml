@@ -19,7 +19,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.fusesource.hawtbuf</groupId>
-  <artifactId>hawtbuf-proto-test</artifactId>
+  <artifactId>hawtbuf-proto-tests</artifactId>
   <version>NONE</version>
   <packaging>jar</packaging>
 

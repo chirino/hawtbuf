@@ -48,7 +48,7 @@
   <modules>
     <module>hawtbuf-core</module>
     <module>hawtbuf-proto</module>
-    <module>hawtbuf-proto-tests</module>
+    <module>hawtbuf-amqp-gen</module>
     <module>hawtbuf-amqp</module>
   </modules>
   
