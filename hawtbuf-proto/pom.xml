@@ -29,7 +29,7 @@
   <version>1.0-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
   
-  <name>ActiveMQ Protocol Buffers Implementation and Compiler</name>
+  <name>HawtBuf :: Proto</name>
 
   <description>
     A Simpler Protocol Buffer Java API.  Includes a Proto to Java compiler.
@@ -64,7 +64,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.4</version>
+      <version>${junit-version}</version>
       <scope>test</scope>
     </dependency>
     

@@ -22,6 +22,7 @@
 import "unittest.proto";
 
 package protobuf_unittest;
+option java_package = "org.fusesource.hawtbuf.proto";
 
 option java_multiple_files = true;
 option java_outer_classname = "MultipleFilesTestProto";

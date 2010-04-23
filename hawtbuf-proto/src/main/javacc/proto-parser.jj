@@ -35,9 +35,9 @@ PARSER_BEGIN(ProtoParser)
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.activemq.protobuf.compiler.parser;
+package org.fusesource.hawtbuf.proto.compiler.parser;
 
-import org.apache.activemq.protobuf.compiler.*;
+import org.fusesource.hawtbuf.proto.compiler.*;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.Hashtable;

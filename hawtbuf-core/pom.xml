@@ -29,7 +29,7 @@
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>ActiveMQ :: Util</name>
+  <name>HawtBuf :: Core</name>
 
 
   <repositories>
@@ -75,8 +75,8 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <scope>test</scope>
       <version>${junit-version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>

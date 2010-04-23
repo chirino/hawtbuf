@@ -19,268 +19,338 @@
   
   <modelVersion>4.0.0</modelVersion>
   
-  <parent>
-    <groupId>org.apache</groupId>
-    <artifactId>apache</artifactId>
-    <version>6</version>
-  </parent>
-
   <groupId>org.fusesource.hawtbuf</groupId>
   <artifactId>hawtbuf-project</artifactId>
   <version>1.0-SNAPSHOT</version>
-  
   <packaging>pom</packaging>
-  <name>ActiveMQ Protocol Buffers POM</name>
+  
+  <name>HawtBuf Project</name>
 
   <description>
-    A Simpler Protocol Buffer Java API.  Comes with a built in proto file compiler and Java source code generator.
+    HawtBuf is a suite of libraries to make it easier to work with byte buffers.  
+    It includes a simpler protobuf Java API ands java ant/maven based proto file compiler.
   </description>
 
-  <prerequisites>
-    <maven>2.0.10</maven>
-  </prerequisites>
-
-  <url>http://activemq.apache.org</url>
-  <mailingLists>
-    <mailingList>
-      <name>Development List</name>
-      <subscribe>dev-subscribe@activemq.apache.org</subscribe>
-      <unsubscribe>dev-unsubscribe@activemq.apache.org</unsubscribe>
-      <post>dev@activemq.apache.org</post>
-    </mailingList>
-  </mailingLists>
-  
   <properties>
+    <forge-project-id>hawtbuf</forge-project-id>
+    <forge-project-id-uc>HAWTBUF</forge-project-id-uc>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <release-altGitURL>scm:git:ssh://git@forge.fusesource.com/${forge-project-id}.git</release-altGitURL>
+
     <commons-logging-version>1.1</commons-logging-version>
     <junit-version>4.7</junit-version>
     <log4j-version>1.2.14</log4j-version>
-
-    <siteId>protobuf</siteId>
-    <!-- base url for site deployment.  See distribution management for full url.  Override this in settings.xml for staging -->
-    <staging.siteURL>scp://people.apache.org/x1/www/activemq.apache.org</staging.siteURL>
   </properties>
   
-  <distributionManagement>
-    <site>
-      <!-- this needs to match a server in your settings.xml with upload settings -->
-      <id>protobuf-website</id>
-      <!-- set the staging.siteURL in your ~/.m2/settings.xml in a release or other profile -->
-      <url>${staging.siteURL}/${siteId}/maven/${project.version}</url>
-      <!--<url>${site-repo-url}</url>-->
-    </site>
-  </distributionManagement>
-
   <modules>
     <module>hawtbuf-core</module>
     <module>hawtbuf-proto</module>
     <module>hawtbuf-proto-tests</module>
   </modules>
-
+  
+  <url>http://${forge-project-id}.fusesource.org</url>
+  <inceptionYear>2010</inceptionYear>
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  
+  <organization>
+    <name>Progress Software Inc.</name>
+    <url>http://fusesource.com/</url>
+  </organization> 
+  <developers>
+    <developer>
+      <id>chirino</id>
+      <name>Hiram Chirino</name>
+      <email>hiram@hiramchirino.com</email>
+      <url>http://hiramchirino.com</url>
+      <timezone>GMT-5</timezone>
+    </developer>
+  </developers>
+  <mailingLists>
+    <mailingList>
+      <name>${forge-project-id} dev</name>
+      <post>${forge-project-id}-dev@fusesource.org</post>
+      <subscribe>${forge-project-id}-dev-subscribe@fusesource.org</subscribe>
+    </mailingList>
+    <mailingList>
+      <name>${forge-project-id} commits</name>
+      <post>${forge-project-id}-commits@fusesource.org</post>
+      <subscribe>${forge-project-id}-commits-subscribe@fusesource.org</subscribe>
+    </mailingList>
+  </mailingLists>
+  <issueManagement>
+    <system>jira</system>
+    <url>http://fusesource.com/issues/browse/${forge-project-id-uc}</url>
+  </issueManagement>
   <scm>
-    <connection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-protobuf/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/activemq/activemq-protobuf/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/activemq/activemq-protobuf/trunk/</url>
+    <connection>scm:git:git://forge.fusesource.com/${forge-project-id}.git</connection>
+    <developerConnection>scm:git:ssh://git@forge.fusesource.com/${forge-project-id}.git</developerConnection>
+    <url>http://fusesource.com/forge/gitweb?p=${forge-project-id}.git</url>
   </scm>
+  <distributionManagement>
+    <repository>
+      <id>fusesource-nexus-staging</id>
+      <name>Fusesource Release Repository</name>
+      <url>http://repo.fusesource.com/nexus/service/local/staging/deploy/maven2</url>
+    </repository>
+    <snapshotRepository>
+      <id>fusesource-nexus-snapshots</id>
+      <name>Fusesource Nexus Snapshots</name>
+      <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <site>
+      <id>website.fusesource.org</id>
+      <name>website</name>
+      <url>dav:http://fusesource.com/forge/dav/${forge-project-id}/maven/${project.version}</url>
+    </site>
+  </distributionManagement> 
 
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.4</version>
-        <scope>test</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
+  <prerequisites>
+    <maven>2.0.10</maven>
+  </prerequisites>
 
   <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.2-beta-4</version>
-          <configuration>
-            <tarLongFileMode>gnu</tarLongFileMode>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-eclipse-plugin</artifactId>
-          <version>2.7</version>
-          <configuration>
-            <downloadSources>true</downloadSources>
-            <downloadJavadocs>true</downloadJavadocs>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.felix</groupId>
-          <artifactId>maven-bundle-plugin</artifactId>
-          <version>1.0.0</version>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>ianal-maven-plugin</artifactId>
-          <version>1.0-alpha-1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>javacc-maven-plugin</artifactId>
-          <version>2.0</version>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>rat-maven-plugin</artifactId>
-          <version>1.0-alpha-3</version>
-          <configuration>
-            <excludeSubProjects>false</excludeSubProjects>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
+    <defaultGoal>install</defaultGoal>
+
+    <extensions>
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+        <artifactId>wagon-webdav-jackrabbit</artifactId>
+        <version>1.0-beta-6</version>
+      </extension>
+    </extensions>
+
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <index>true</index>
-            <compress>true</compress>
-          </archive>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
+        <version>1.0.0</version>
         <extensions>true</extensions>
         <configuration>
           <instructions>
             <Bundle-Name>${artifactId}</Bundle-Name>
             <Bundle-SymbolicName>${groupId}.${artifactId}</Bundle-SymbolicName>
-            <Export-Package>org.apache.activemq.protobuf.*</Export-Package>
-            <Implementation-Title>Apache ActiveMQ Protobuf</Implementation-Title>
+            <Export-Package>org.fusesource.${forge-project-id}.*</Export-Package>
+            <Implementation-Title>${project.name}</Implementation-Title>
             <Implementation-Version>${project.version}</Implementation-Version>
           </instructions>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <source>1.5</source>
-          <target>1.5</target>
-          <optimize>true</optimize>
-          <debug>true</debug>
-          <showDeprecation>true</showDeprecation>
-          <showWarnings>true</showWarnings>
-        </configuration>
-      </plugin>
 
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>validate</phase>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireMavenVersion>
-                  <version>[2.0.10,)</version>
-                </requireMavenVersion>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>ianal-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>verify-legal-files</goal>
-            </goals>
-            <configuration>
-              <strict>true</strict>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.4.3</version>
         <configuration>
-          <forkMode>once</forkMode>
           <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <forkMode>once</forkMode>
           <argLine>-enableassertions</argLine>
           <failIfNoTests>false</failIfNoTests>
+          <workingDirectory>${project.build.directory}</workingDirectory>
           <includes>
             <include>**/*Test.java</include>
           </includes>
+          <excludes>
+            <!-- <exclude>**/**</exclude> -->
+          </excludes>
         </configuration>
       </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.1</version>
+        <configuration>
+          <source>1.5</source>
+          <target>1.5</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-idea-plugin</artifactId>
+        <version>2.2</version>
+        <configuration>
+          <downloadSources>true</downloadSources>
+          <downloadJavadocs>true</downloadJavadocs>
+        </configuration>
+      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-eclipse-plugin</artifactId>
+        <version>2.5.1</version>
         <configuration>
-          <outputDirectory>${basedir}/eclipse-classes</outputDirectory>
+          <downloadSources>true</downloadSources>
+          <downloadJavadocs>true</downloadJavadocs>
         </configuration>
       </plugin>
+
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>rat-maven-plugin</artifactId>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.0</version>
+        <configuration>
+          <autoVersionSubmodules>true</autoVersionSubmodules>
+          <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
+          <preparationGoals>clean install</preparationGoals>
+          <goals>deploy</goals>
+          <arguments>-Prelease</arguments>
+        </configuration>
       </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-scm-plugin</artifactId>
+        <version>1.3</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.scm</groupId>
+            <artifactId>maven-scm-provider-gitexe</artifactId>
+            <version>1.3</version>
+          </dependency>
+        </dependencies>
+      </plugin>           
 
     </plugins>
   </build>
+  
   <reporting>
     <plugins>
       <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>jxr-maven-plugin</artifactId>
+        <version>2.0-beta-1</version>
+        <configuration>
+          <aggregate>true</aggregate>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-report-plugin</artifactId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.6</version>
+        <configuration>
+          <excludePackageNames>*.internal</excludePackageNames>
+          <linksource>true</linksource>
+          <links>
+            <link>http://java.sun.com/j2se/1.5.0/docs/api</link>
+          </links>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.1.1</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>index</report>
+              <report>sumary</report>
+              <report>plugins</report>
+              <report>dependencies</report>
+              <report>mailing-list</report>
+              <report>issue-tracking</report>
+              <report>license</report>
+              <report>scm</report>
+            </reports>
+          </reportSet>
+        </reportSets>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
-        <artifactId>taglist-maven-plugin</artifactId>
+        <artifactId>surefire-report-maven-plugin</artifactId>
+        <version>2.0-beta-1</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <links>
-            <link>http://java.sun.com/j2se/1.5.0/docs/api/</link>
-            <link>http://java.sun.com/javaee/5/docs/api/</link>
-          </links>
-          <!--
-          <stylesheetfile>${basedir}/../etc/css/stylesheet.css</stylesheetfile>
-          -->
-          <linksource>true</linksource>
-          <maxmemory>900m</maxmemory>
-          <source>1.5</source>
-        </configuration>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <version>2.5</version>
       </plugin>
     </plugins>
   </reporting>
   
+
   <profiles>
+    <!--
+      To generate a graph of the project dependencies, run: mvn -P graph
+      graph:project
+    -->
     <profile>
-      <id>apache-release</id>
-      <activation>
-        <property>
-          <name>apache-release</name>
-        </property>
-      </activation>
+      <id>graph</id>
       <build>
         <plugins>
           <plugin>
+            <groupId>org.fusesource.mvnplugins</groupId>
+            <artifactId>maven-graph-plugin</artifactId>
+            <version>1.5</version>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <!-- We want to sign the artifact, the POM, and all attached artifacts -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.0</version>
+            <configuration>
+              <passphrase>${gpg.passphrase}</passphrase>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>2.1.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>2.6</version>
+            
+            <configuration>
+              <encoding>${project.build.sourceEncoding}</encoding>
+            </configuration>
+            
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          
+          <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-assembly-plugin</artifactId>
+            <version>2.2-beta-4</version>
             <executions>
               <execution>
                 <goals>
@@ -288,6 +358,7 @@
                 </goals>
                 <phase>package</phase>
                 <configuration>
+                  <tarLongFileMode>gnu</tarLongFileMode>
                   <runOnlyAtExecutionRoot>true</runOnlyAtExecutionRoot>
                   <descriptorRefs>
                     <descriptorRef>
@@ -308,13 +379,7 @@
               </dependency>
             </dependencies>
           </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <test>false</test>
-            </configuration>
-          </plugin>
+
         </plugins>
       </build>
     </profile>

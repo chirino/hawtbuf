@@ -25,8 +25,9 @@ import "unittest_import.proto";
 
 // We don't put this in a package within proto2 because we need to make sure
 // that the generated code doesn't depend on being in the proto2 namespace.
-// In test_util.h we do "using namespace unittest = protobuf_unittest".
+// In test_util.h we do "using namespace unittest = org.fusesource.hawtbuf.proto".
 package protobuf_unittest;
+option java_package = "org.fusesource.hawtbuf.proto";
 
 // Protos optimized for SPEED use a strict superset of the generated code
 // of equivalent ones optimized for CODE_SIZE, so we should optimize all our

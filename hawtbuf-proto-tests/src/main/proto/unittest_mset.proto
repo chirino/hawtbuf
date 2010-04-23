@@ -21,6 +21,7 @@
 // This file contains messages for testing message_set_wire_format.
 
 package protobuf_unittest;
+option java_package = "org.fusesource.hawtbuf.proto";
 
 option optimize_for = SPEED;
 

@@ -29,20 +29,23 @@
   <version>1.0-SNAPSHOT</version>
   
   <packaging>jar</packaging>
-  <name>ActiveMQ Protocol Buffers Tests</name>
+  <name>HawtBuf :: Proto Tests</name>
 
   <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.4</version>
-      <scope>test</scope>
-    </dependency>
+
     <dependency>
       <groupId>org.fusesource.hawtbuf</groupId>
       <artifactId>hawtbuf-proto</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
+    
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit-version}</version>
+      <scope>test</scope>
+    </dependency>
+    
   </dependencies>
 
   <build>

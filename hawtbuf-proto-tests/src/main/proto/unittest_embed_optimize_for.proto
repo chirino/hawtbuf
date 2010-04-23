@@ -23,6 +23,7 @@
 import "unittest_optimize_for.proto";
 
 package protobuf_unittest;
+option java_package = "org.fusesource.hawtbuf.proto";
 
 // We optimize for speed here, but we are importing a proto that is optimized
 // for code size.

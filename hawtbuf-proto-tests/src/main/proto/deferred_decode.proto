@@ -15,7 +15,8 @@
 // limitations under the License.
 //
 
-package org.apache.activemq.protobuf;
+package protobuf_unittest;
+option java_package = "org.fusesource.hawtbuf.proto";
 option java_outer_classname = "DeferredUnmarshal";
 option deferred_decode = true;
 
