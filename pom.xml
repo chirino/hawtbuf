@@ -25,9 +25,9 @@
     <version>6</version>
   </parent>
 
-  <groupId>org.apache.activemq.protobuf</groupId>
-  <artifactId>activemq-protobuf-pom</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <groupId>org.fusesource.hawtbuf</groupId>
+  <artifactId>hawtbuf-project</artifactId>
+  <version>1.0-SNAPSHOT</version>
   
   <packaging>pom</packaging>
   <name>ActiveMQ Protocol Buffers POM</name>
@@ -51,6 +51,10 @@
   </mailingLists>
   
   <properties>
+    <commons-logging-version>1.1</commons-logging-version>
+    <junit-version>4.7</junit-version>
+    <log4j-version>1.2.14</log4j-version>
+
     <siteId>protobuf</siteId>
     <!-- base url for site deployment.  See distribution management for full url.  Override this in settings.xml for staging -->
     <staging.siteURL>scp://people.apache.org/x1/www/activemq.apache.org</staging.siteURL>
@@ -67,6 +71,7 @@
   </distributionManagement>
 
   <modules>
+    <module>hawtbuf-core</module>
     <module>activemq-protobuf</module>
     <module>activemq-protobuf-test</module>
   </modules>
@@ -85,20 +90,6 @@
         <version>4.4</version>
         <scope>test</scope>
       </dependency>
-
-      <!-- internal protobuf dependencies -->
-      <dependency>
-        <groupId>org.apache.activemq.protobuf</groupId>
-        <artifactId>activemq-protobuf</artifactId>
-        <version>${version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.activemq.protobuf</groupId>
-        <artifactId>activemq-protobuf-test</artifactId>
-        <version>${version}</version>
-      </dependency>
-
-
     </dependencies>
   </dependencyManagement>
 
