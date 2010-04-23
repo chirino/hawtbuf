@@ -145,6 +145,10 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
         pos = offset;
         onWrite();
     }
+    
+    public int position() {
+        return pos;
+    }
 
     public int size() {
         return pos;
