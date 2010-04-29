@@ -96,6 +96,7 @@ public class Buffer implements Comparable<Buffer> {
         if (length != data.length) {
             byte t[] = new byte[length];
             System.arraycopy(data, offset, t, 0, length);
+            data = t;
         }
         return data;
     }
