@@ -502,7 +502,22 @@ public class AltJavaGenerator {
         p();
 
     }
-    
+
+
+    private boolean isPrimitive(String type) {
+        return type.equals("int") ||
+                type.equals("long") ||
+                type.equals("double") ||
+                type.equals("float") ||
+                type.equals("boolean");
+    }
+
+    private boolean isBuferOrString(String type) {
+        return type.equals("org.fusesource.hawtbuf.AsciiBuffer") ||
+                type.equals("org.fusesource.hawtbuf.UTF8Buffer") ||
+                type.equals("org.fusesource.hawtbuf.Buffer") ||
+                type.equals("String");
+    }
     /**
      * @param m
      * @param className
@@ -514,7 +529,7 @@ public class AltJavaGenerator {
         for (FieldDescriptor field : m.getFields().values()) {
             String lname = lCamel(field.getName());
             String type = field.getRule()==FieldDescriptor.REPEATED_RULE ? javaCollectionType(field):javaType(field);
-            boolean primitive = field.getTypeDescriptor()==null || field.getTypeDescriptor().isEnum();
+            boolean primitive = isPrimitive(type);
             if( field.isRepeated() ) {
                 if( primitive ) {
                     p("this.f_" + lname + " = other.f_" + lname + ";");
@@ -537,9 +552,11 @@ public class AltJavaGenerator {
                     p("}");
                 }
             } else {
-                if( primitive ) {
+                if( primitive || isBuferOrString(type) || field.getTypeDescriptor().isEnum() ) {
                     p("this.f_" + lname + " = other.f_" + lname + ";");
-                    p("this.b_" + lname + " = other.b_" + lname + ";");
+                    if( primitive ) {
+                        p("this.b_" + lname + " = other.b_" + lname + ";");
+                    }
                 } else {
                     p("this.f_" + lname + " = other.f_" + lname + ";");
                     p("if( this.f_" + lname + " !=null ) {");
@@ -1415,12 +1432,10 @@ public class AltJavaGenerator {
                     p("if( in.readBoolean() ) {");
                     indent();
                     p("f_"+lname+" = in.readUTF();");
-                    p("b_"+lname+" = true;");
                     unindent();
                     p("} else {");
                     indent();
                     p("f_"+lname+" = null;");
-                    p("b_"+lname+" = false;");
                     unindent();
                     p("}");
                 } else if( field.getType() == FieldDescriptor.BYTES_TYPE ) {
@@ -1432,12 +1447,10 @@ public class AltJavaGenerator {
                     p("byte b[] = new byte[size];");
                     p("in.readFully(b);");
                     p("f_"+lname+" = new "+type+"(b);");
-                    p("b_"+lname+" = true;");
                     unindent();
                     p("} else {");
                     indent();
                     p("f_"+lname+" = null;");
-                    p("b_"+lname+" = false;");
                     unindent();
                     p("}");
                     unindent();
@@ -1446,12 +1459,10 @@ public class AltJavaGenerator {
                     p("if( in.readBoolean() ) {");
                     indent();
                     p("f_"+lname+" = " + type + ".valueOf(in.readShort());");
-                    p("b_"+lname+" = true;");
                     unindent();
                     p("} else {");
                     indent();
                     p("f_"+lname+" = null;");
-                    p("b_"+lname+" = false;");
                     unindent();
                     p("}");
                 } else {
@@ -1784,7 +1795,7 @@ public class AltJavaGenerator {
         String uname = uCamel(field.getName());
         String type = field.getRule()==FieldDescriptor.REPEATED_RULE ? javaCollectionType(field):javaType(field);
         String typeDefault = javaTypeDefault(field);
-        boolean primitive = field.getTypeDescriptor()==null || field.getTypeDescriptor().isEnum();
+        boolean primitive = isPrimitive(type);
         boolean repeated = field.getRule()==FieldDescriptor.REPEATED_RULE;
 
         // Create the fields..
