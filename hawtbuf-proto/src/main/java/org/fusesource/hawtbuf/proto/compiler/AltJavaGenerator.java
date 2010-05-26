@@ -531,7 +531,7 @@ public class AltJavaGenerator {
             String type = field.getRule()==FieldDescriptor.REPEATED_RULE ? javaCollectionType(field):javaType(field);
             boolean primitive = isPrimitive(type);
             if( field.isRepeated() ) {
-                if( primitive ) {
+                if( primitive || isBuferOrString(type) || field.getTypeDescriptor().isEnum() ) {
                     p("this.f_" + lname + " = other.f_" + lname + ";");
                     p("if( this.f_" + lname + " !=null && !other.frozen()) {");
                     indent();
