@@ -23,12 +23,12 @@ import java.io.IOException;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public final class BufferEditor {
+abstract public class BufferEditor {
 
-    private BufferEditor() {    
+    private BufferEditor() {
     }
-    
-    public static byte[] toByteArray(Buffer buffer) {
+
+    public byte[] toByteArray(Buffer buffer) {
         if (buffer.offset == 0 && buffer.length == buffer.data.length) {
             return buffer.data;
         }
@@ -38,236 +38,286 @@ public final class BufferEditor {
         return rc;
     }
 
-    private static void spaceNeeded(Buffer buffer, int i) {
+    protected void spaceNeeded(Buffer buffer, int i) {
         assert buffer.offset + i <= buffer.length;
     }
 
-    public static int remaining(Buffer buffer) {
+    public int remaining(Buffer buffer) {
         return buffer.length - buffer.offset;
     }
 
-    public static int read(Buffer buffer) {
+    public int read(Buffer buffer) {
         return buffer.data[buffer.offset++] & 0xff;
     }
 
-    public static void readFully(Buffer buffer, byte[] b) throws IOException {
+    public void readFully(Buffer buffer, byte[] b) throws IOException {
         readFully(buffer, b, 0, b.length);
     }
 
-    public static void readFully(Buffer buffer, byte[] b, int off, int len) throws IOException {
+    public void readFully(Buffer buffer, byte[] b, int off, int len) throws IOException {
         spaceNeeded(buffer, len);
         System.arraycopy(buffer.data, buffer.offset, b, off, len);
         buffer.offset += len;
     }
 
-    public static int skipBytes(Buffer buffer, int n) throws IOException {
+    public int skipBytes(Buffer buffer, int n) throws IOException {
         int rc = Math.min(n, remaining(buffer));
         buffer.offset += rc;
         return rc;
     }
 
-    public static boolean readBoolean(Buffer buffer) throws IOException {
+    public boolean readBoolean(Buffer buffer) throws IOException {
         spaceNeeded(buffer, 1);
         return read(buffer) != 0;
     }
 
-    public static byte readByte(Buffer buffer) throws IOException {
+    public byte readByte(Buffer buffer) throws IOException {
         spaceNeeded(buffer, 1);
-        return (byte)read(buffer);
+        return (byte) read(buffer);
     }
 
-    public static int readUnsignedByte(Buffer buffer) throws IOException {
+    public int readUnsignedByte(Buffer buffer) throws IOException {
         spaceNeeded(buffer, 1);
         return read(buffer);
     }
 
-    public static short readShortBig(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 2);
-        return (short)((read(buffer) << 8) + (read(buffer) << 0));
-    }
-
-    public static short readShortLittle(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 2);
-        return (short)((read(buffer) << 0) + (read(buffer) << 8));
-    }
-
-    public static int readUnsignedShortBig(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 2);
-        return (read(buffer) << 8) + (read(buffer) << 0);
-    }
-
-    public static int readUnsignedShortLittle(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 2);
-        return (read(buffer) << 0) + (read(buffer) << 8);
-    }
-
-    public static char readCharBig(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 2);
-        return (char)((read(buffer) << 8) + (read(buffer) << 0));
-    }
-
-    public static char readCharLittle(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 2);
-        return (char)((read(buffer) << 0) + (read(buffer) << 8));
-    }
-
-    public static int readIntBig(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 4);
-        return (read(buffer) << 24) + (read(buffer) << 16) + (read(buffer) << 8) + (read(buffer) << 0);
-    }
-
-    public static int readIntLittle(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 4);
-        return (read(buffer) << 0) + (read(buffer) << 8) + (read(buffer) << 16) + (read(buffer) << 24);
-    }
-
-    public static long readLongBig(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 8);
-        return ((long)read(buffer) << 56) + ((long)read(buffer) << 48) + ((long)read(buffer) << 40) + ((long)read(buffer) << 32) + ((long)read(buffer) << 24)
-                + ((read(buffer)) << 16) + ((read(buffer)) << 8) + ((read(buffer)) << 0);
-    }
-
-    public static long readLongLittle(Buffer buffer) throws IOException {
-        spaceNeeded(buffer, 8);
-        return (read(buffer) << 0) + (read(buffer) << 8) + (read(buffer) << 16) + ((long)read(buffer) << 24) + ((long)read(buffer) << 32) + ((long)read(buffer) << 40)
-                + ((long)read(buffer) << 48) + ((long)read(buffer) << 56);
-    }
-
-    public static double readDoubleBig(Buffer buffer) throws IOException {
-        return Double.longBitsToDouble(readLongBig(buffer));
-    }
-
-    public static double readDoubleLittle(Buffer buffer) throws IOException {
-        return Double.longBitsToDouble(readLongLittle(buffer));
-    }
-
-    public static float readFloatBig(Buffer buffer) throws IOException {
-        return Float.intBitsToFloat(readIntBig(buffer));
-    }
-
-    public static float readFloatLittle(Buffer buffer) throws IOException {
-        return Float.intBitsToFloat(readIntLittle(buffer));
-    }
-
-    public static void write(Buffer buffer, int b) throws IOException {
+    public void write(Buffer buffer, int b) throws IOException {
         spaceNeeded(buffer, 1);
-        buffer.data[buffer.offset++] = (byte)b;
+        buffer.data[buffer.offset++] = (byte) b;
     }
 
-    public static void write(Buffer buffer, byte[] b) throws IOException {
+    public void write(Buffer buffer, byte[] b) throws IOException {
         write(buffer, b, 0, b.length);
     }
 
-    public static void write(Buffer buffer, byte[] b, int off, int len) throws IOException {
+    public void write(Buffer buffer, byte[] b, int off, int len) throws IOException {
         spaceNeeded(buffer, len);
         System.arraycopy(b, off, buffer.data, buffer.offset, len);
         buffer.offset += len;
     }
 
-    public static void writeBoolean(Buffer buffer, boolean v) throws IOException {
+    public void writeBoolean(Buffer buffer, boolean v) throws IOException {
         spaceNeeded(buffer, 1);
         write(buffer, v ? 1 : 0);
     }
 
-    public static void writeByte(Buffer buffer, int v) throws IOException {
+    public void writeByte(Buffer buffer, int v) throws IOException {
         spaceNeeded(buffer, 1);
         write(buffer, v);
     }
 
-    public static void writeShortBig(Buffer buffer, int v) throws IOException {
-        spaceNeeded(buffer, 2);
-        write(buffer, (v >>> 8) & 0xFF);
-        write(buffer, (v >>> 0) & 0xFF);
-    }
 
-    public static void writeShortLittle(Buffer buffer, int v) throws IOException {
-        spaceNeeded(buffer, 2);
-        write(buffer, (v >>> 0) & 0xFF);
-        write(buffer, (v >>> 8) & 0xFF);
-    }
+    abstract public short readShort(Buffer buffer) throws IOException;
 
-    public static void writeCharBig(Buffer buffer, int v) throws IOException {
-        spaceNeeded(buffer, 2);
-        write(buffer, (v >>> 8) & 0xFF);
-        write(buffer, (v >>> 0) & 0xFF);
-    }
+    abstract public int readUnsignedShort(Buffer buffer) throws IOException;
 
-    public static void writeCharLittle(Buffer buffer, int v) throws IOException {
-        spaceNeeded(buffer, 2);
-        write(buffer, (v >>> 0) & 0xFF);
-        write(buffer, (v >>> 8) & 0xFF);
-    }
+    abstract public char readChar(Buffer buffer) throws IOException;
 
-    public static void writeIntBig(Buffer buffer, int v) throws IOException {
-        spaceNeeded(buffer, 4);
-        write(buffer, (v >>> 24) & 0xFF);
-        write(buffer, (v >>> 16) & 0xFF);
-        write(buffer, (v >>> 8) & 0xFF);
-        write(buffer, (v >>> 0) & 0xFF);
-    }
+    abstract public int readInt(Buffer buffer) throws IOException;
 
-    public static void writeIntLittle(Buffer buffer, int v) throws IOException {
-        spaceNeeded(buffer, 4);
-        write(buffer, (v >>> 0) & 0xFF);
-        write(buffer, (v >>> 8) & 0xFF);
-        write(buffer, (v >>> 16) & 0xFF);
-        write(buffer, (v >>> 24) & 0xFF);
-    }
+    abstract public long readLong(Buffer buffer) throws IOException;
 
-    public static void writeLongBig(Buffer buffer, long v) throws IOException {
-        spaceNeeded(buffer, 8);
-        write(buffer, (int)(v >>> 56) & 0xFF);
-        write(buffer, (int)(v >>> 48) & 0xFF);
-        write(buffer, (int)(v >>> 40) & 0xFF);
-        write(buffer, (int)(v >>> 32) & 0xFF);
-        write(buffer, (int)(v >>> 24) & 0xFF);
-        write(buffer, (int)(v >>> 16) & 0xFF);
-        write(buffer, (int)(v >>> 8) & 0xFF);
-        write(buffer, (int)(v >>> 0) & 0xFF);
-    }
+    abstract public double readDouble(Buffer buffer) throws IOException;
 
-    public static void writeLongLittle(Buffer buffer, long v) throws IOException {
-        spaceNeeded(buffer, 8);
-        write(buffer, (int)(v >>> 0) & 0xFF);
-        write(buffer, (int)(v >>> 8) & 0xFF);
-        write(buffer, (int)(v >>> 16) & 0xFF);
-        write(buffer, (int)(v >>> 24) & 0xFF);
-        write(buffer, (int)(v >>> 32) & 0xFF);
-        write(buffer, (int)(v >>> 40) & 0xFF);
-        write(buffer, (int)(v >>> 48) & 0xFF);
-        write(buffer, (int)(v >>> 56) & 0xFF);
-    }
+    abstract public float readFloat(Buffer buffer) throws IOException;
 
-    public static void writeDoubleBig(Buffer buffer, double v) throws IOException {
-        writeLongBig(buffer, Double.doubleToLongBits(v));
-    }
+    abstract public void writeShort(Buffer buffer, int v) throws IOException;
 
-    public static void writeDoubleLittle(Buffer buffer, double v) throws IOException {
-        writeLongLittle(buffer, Double.doubleToLongBits(v));
-    }
+    abstract public void writeChar(Buffer buffer, int v) throws IOException;
 
-    public static void writeFloatBig(Buffer buffer, float v) throws IOException {
-        writeIntBig(buffer, Float.floatToIntBits(v));
-    }
+    abstract public void writeInt(Buffer buffer, int v) throws IOException;
 
-    public static void writeFloatLittle(Buffer buffer, float v) throws IOException {
-        writeIntLittle(buffer, Float.floatToIntBits(v));
-    }
+    abstract public void writeLong(Buffer buffer, long v) throws IOException;
 
-    public static void writeRawDoubleBig(Buffer buffer, double v) throws IOException {
-        writeLongBig(buffer, Double.doubleToRawLongBits(v));
-    }
+    abstract public void writeDouble(Buffer buffer, double v) throws IOException;
 
-    public static void writeRawDoubleLittle(Buffer buffer, double v) throws IOException {
-        writeLongLittle(buffer, Double.doubleToRawLongBits(v));
-    }
+    abstract public void writeFloat(Buffer buffer, float v) throws IOException;
 
-    public static void writeRawFloatBig(Buffer buffer, float v) throws IOException {
-        writeIntBig(buffer, Float.floatToRawIntBits(v));
-    }
+    abstract public void writeRawDouble(Buffer buffer, double v) throws IOException;
 
-    public static void writeRawFloatLittle(Buffer buffer, float v) throws IOException {
-        writeIntLittle(buffer, Float.floatToRawIntBits(v));
-    }
+    abstract public void writeRawFloat(Buffer buffer, float v) throws IOException;
 
+    public static final BufferEditor BIG_ENDIAN = new BufferEditor() {
+
+        public short readShort(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 2);
+            return (short) ((read(buffer) << 8) + (read(buffer) << 0));
+        }
+
+
+        public int readUnsignedShort(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 2);
+            return (read(buffer) << 8) + (read(buffer) << 0);
+        }
+
+        public char readChar(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 2);
+            return (char) ((read(buffer) << 8) + (read(buffer) << 0));
+        }
+
+
+        public int readInt(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 4);
+            return (read(buffer) << 24) + (read(buffer) << 16) + (read(buffer) << 8) + (read(buffer) << 0);
+        }
+
+
+        public long readLong(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 8);
+            return ((long) read(buffer) << 56) + ((long) read(buffer) << 48) + ((long) read(buffer) << 40) + ((long) read(buffer) << 32) + ((long) read(buffer) << 24)
+                    + ((read(buffer)) << 16) + ((read(buffer)) << 8) + ((read(buffer)) << 0);
+        }
+
+
+        public double readDouble(Buffer buffer) throws IOException {
+            return Double.longBitsToDouble(readLong(buffer));
+        }
+
+
+        public float readFloat(Buffer buffer) throws IOException {
+            return Float.intBitsToFloat(readInt(buffer));
+        }
+
+        public void writeShort(Buffer buffer, int v) throws IOException {
+            spaceNeeded(buffer, 2);
+            write(buffer, (v >>> 8) & 0xFF);
+            write(buffer, (v >>> 0) & 0xFF);
+        }
+
+
+        public void writeChar(Buffer buffer, int v) throws IOException {
+            spaceNeeded(buffer, 2);
+            write(buffer, (v >>> 8) & 0xFF);
+            write(buffer, (v >>> 0) & 0xFF);
+        }
+
+
+        public void writeInt(Buffer buffer, int v) throws IOException {
+            spaceNeeded(buffer, 4);
+            write(buffer, (v >>> 24) & 0xFF);
+            write(buffer, (v >>> 16) & 0xFF);
+            write(buffer, (v >>> 8) & 0xFF);
+            write(buffer, (v >>> 0) & 0xFF);
+        }
+
+        public void writeLong(Buffer buffer, long v) throws IOException {
+            spaceNeeded(buffer, 8);
+            write(buffer, (int) (v >>> 56) & 0xFF);
+            write(buffer, (int) (v >>> 48) & 0xFF);
+            write(buffer, (int) (v >>> 40) & 0xFF);
+            write(buffer, (int) (v >>> 32) & 0xFF);
+            write(buffer, (int) (v >>> 24) & 0xFF);
+            write(buffer, (int) (v >>> 16) & 0xFF);
+            write(buffer, (int) (v >>> 8) & 0xFF);
+            write(buffer, (int) (v >>> 0) & 0xFF);
+        }
+
+
+        public void writeDouble(Buffer buffer, double v) throws IOException {
+            writeLong(buffer, Double.doubleToLongBits(v));
+        }
+
+        public void writeFloat(Buffer buffer, float v) throws IOException {
+            writeInt(buffer, Float.floatToIntBits(v));
+        }
+
+        public void writeRawDouble(Buffer buffer, double v) throws IOException {
+            writeLong(buffer, Double.doubleToRawLongBits(v));
+        }
+
+        public void writeRawFloat(Buffer buffer, float v) throws IOException {
+            writeInt(buffer, Float.floatToRawIntBits(v));
+        }
+    };
+
+
+    public static final BufferEditor LITTLE_ENDIAN = new BufferEditor() {
+
+        public short readShort(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 2);
+            return (short) ((read(buffer) << 0) + (read(buffer) << 8));
+        }
+
+        public int readUnsignedShort(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 2);
+            return (read(buffer) << 0) + (read(buffer) << 8);
+        }
+
+        public char readChar(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 2);
+            return (char) ((read(buffer) << 0) + (read(buffer) << 8));
+        }
+
+        public int readInt(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 4);
+            return (read(buffer) << 0) + (read(buffer) << 8) + (read(buffer) << 16) + (read(buffer) << 24);
+        }
+
+        public long readLong(Buffer buffer) throws IOException {
+            spaceNeeded(buffer, 8);
+            return (read(buffer) << 0) + (read(buffer) << 8) + (read(buffer) << 16) + ((long) read(buffer) << 24) + ((long) read(buffer) << 32) + ((long) read(buffer) << 40)
+                    + ((long) read(buffer) << 48) + ((long) read(buffer) << 56);
+        }
+
+        public double readDouble(Buffer buffer) throws IOException {
+            return Double.longBitsToDouble(readLong(buffer));
+        }
+
+        public float readFloat(Buffer buffer) throws IOException {
+            return Float.intBitsToFloat(readInt(buffer));
+        }
+
+        public void writeShort(Buffer buffer, int v) throws IOException {
+            spaceNeeded(buffer, 2);
+            write(buffer, (v >>> 0) & 0xFF);
+            write(buffer, (v >>> 8) & 0xFF);
+        }
+
+        public void writeChar(Buffer buffer, int v) throws IOException {
+            spaceNeeded(buffer, 2);
+            write(buffer, (v >>> 0) & 0xFF);
+            write(buffer, (v >>> 8) & 0xFF);
+        }
+
+
+        public void writeInt(Buffer buffer, int v) throws IOException {
+            spaceNeeded(buffer, 4);
+            write(buffer, (v >>> 0) & 0xFF);
+            write(buffer, (v >>> 8) & 0xFF);
+            write(buffer, (v >>> 16) & 0xFF);
+            write(buffer, (v >>> 24) & 0xFF);
+        }
+
+
+        public void writeLong(Buffer buffer, long v) throws IOException {
+            spaceNeeded(buffer, 8);
+            write(buffer, (int) (v >>> 0) & 0xFF);
+            write(buffer, (int) (v >>> 8) & 0xFF);
+            write(buffer, (int) (v >>> 16) & 0xFF);
+            write(buffer, (int) (v >>> 24) & 0xFF);
+            write(buffer, (int) (v >>> 32) & 0xFF);
+            write(buffer, (int) (v >>> 40) & 0xFF);
+            write(buffer, (int) (v >>> 48) & 0xFF);
+            write(buffer, (int) (v >>> 56) & 0xFF);
+        }
+
+        public void writeDouble(Buffer buffer, double v) throws IOException {
+            writeLong(buffer, Double.doubleToLongBits(v));
+        }
+
+
+        public void writeFloat(Buffer buffer, float v) throws IOException {
+            writeInt(buffer, Float.floatToIntBits(v));
+        }
+
+        public void writeRawDouble(Buffer buffer, double v) throws IOException {
+            writeLong(buffer, Double.doubleToRawLongBits(v));
+        }
+
+
+        public void writeRawFloat(Buffer buffer, float v) throws IOException {
+            writeInt(buffer, Float.floatToRawIntBits(v));
+        }
+
+    };
 }
