@@ -171,14 +171,6 @@ abstract public class BufferEditor {
         return decodeZigZag64(readVarLong());
     }
 
-    private static int decodeZigZag32(int n) {
-        return (n >>> 1) ^ -(n & 1);
-    }
-
-    private static long decodeZigZag64(long n) {
-        return (n >>> 1) ^ -(n & 1);
-    }
-
     /**
      * Encode and write a varint. {@code value} is treated as unsigned, so it
      * won't be sign-extended if negative.
@@ -215,6 +207,14 @@ abstract public class BufferEditor {
 
     public void writeVarSignedLong(long value) throws IOException {
         writeVarLong(encodeZigZag64(value));
+    }
+
+    private static int decodeZigZag32(int n) {
+        return (n >>> 1) ^ -(n & 1);
+    }
+
+    private static long decodeZigZag64(long n) {
+        return (n >>> 1) ^ -(n & 1);
     }
 
     private static int encodeZigZag32(int n) {
