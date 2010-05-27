@@ -125,12 +125,20 @@ public class Buffer implements Comparable<Buffer> {
         return true;
     }
 
-    final public BufferInputStream newInput() {
+    final public BufferInputStream in() {
         return new BufferInputStream(this);
     }
 
-    final public BufferOutputStream newOutput() {
+    final public BufferOutputStream out() {
         return new BufferOutputStream(this);
+    }
+
+    final public BufferEditor bigEndianEditor() {
+        return new BufferEditor.BigEndianBufferEditor(this);
+    }
+
+    final public BufferEditor littleEndianEditor() {
+        return new BufferEditor.LittleEndianBufferEditor(this);
     }
 
     final public boolean isEmpty() {
@@ -260,7 +268,12 @@ public class Buffer implements Comparable<Buffer> {
 
         return rc.toArray(new Buffer[rc.size()]);
     }
-    
+
+    public void reset() {
+        offset = 0;
+        length = data.length;
+    }
+
     ///////////////////////////////////////////////////////////////////
     // Overrides
     ///////////////////////////////////////////////////////////////////
@@ -402,5 +415,19 @@ public class Buffer implements Comparable<Buffer> {
 
     public ByteBuffer toByteBuffer() {
         return ByteBuffer.wrap(data, offset, length);
+    }
+
+    public static AsciiBuffer ascii(String value) {
+        return AsciiBuffer.ascii(value);
+    }
+    public static AsciiBuffer ascii(Buffer buffer) {
+        return AsciiBuffer.ascii(buffer);
+    }
+
+    public static UTF8Buffer utf8(String value) {
+        return UTF8Buffer.utf8(value);
+    }
+    public static UTF8Buffer utf8(Buffer buffer) {
+        return UTF8Buffer.utf8(buffer);
     }
 }

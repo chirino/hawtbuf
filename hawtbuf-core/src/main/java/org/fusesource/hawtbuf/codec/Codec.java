@@ -61,7 +61,8 @@ public interface Codec<T> {
     boolean isDeepCopySupported();
 
     /**
-     * @return a deep copy of the source object.
+     * @return a deep copy of the source object.  If the source is immutable
+     * the same source should be returned.
      */
     T deepCopy(T source);
    

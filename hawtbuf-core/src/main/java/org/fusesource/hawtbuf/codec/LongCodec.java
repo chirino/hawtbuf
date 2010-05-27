@@ -21,7 +21,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * Implementation of a Marshaller for a Long
+ * Implementation of a Codec for a Long
  * 
  */
 public class LongCodec implements Codec<Long> {

@@ -281,8 +281,8 @@ public class AltJavaGenerator {
         }
 
         p("public static final " + type + " "+factoryFeild+" = new " + type + "();");
-        p("public static final org.fusesource.hawtbuf.proto.PBMessageFramedCodec FRAMED_CODEC = new org.fusesource.hawtbuf.proto.PBMessageFramedCodec("+factoryFeild+");");
-        p("public static final org.fusesource.hawtbuf.proto.PBMessageFramedCodec UNFRAMED_CODEC = new org.fusesource.hawtbuf.proto.PBMessageUnframedCodec("+factoryFeild+");");
+        p("public static final org.fusesource.hawtbuf.proto.PBMessageFramedCodec<"+bufferCN+"> FRAMED_CODEC = new org.fusesource.hawtbuf.proto.PBMessageFramedCodec<"+bufferCN+">("+factoryFeild+");");
+        p("public static final org.fusesource.hawtbuf.proto.PBMessageUnframedCodec<"+bufferCN+"> UNFRAMED_CODEC = new org.fusesource.hawtbuf.proto.PBMessageUnframedCodec<"+bufferCN+">("+factoryFeild+");");
         p();
 
         p("public " + beanCN + " create()  {");
@@ -674,7 +674,7 @@ public class AltJavaGenerator {
                 errors.add("The java_type_method option on the " + m.getName() + " message does not points to the " + typeEnum + " enum but it does not have an entry for " + constant);
             }
 
-            String type = javaType(typeDescriptor);
+            String type = qualified(javaFactoryType(typeDescriptor), getterCN);
 
             p("public " + type + " type() {");
             indent();
@@ -1290,17 +1290,17 @@ public class AltJavaGenerator {
                     } else {
                         p("case " + makeTag(field.getTag(), WIRETYPE_LENGTH_DELIMITED) + ":");
                         indent();
-                        String type = javaType(field);
+                        String type = javaFactoryType(field.getTypeDescriptor());
                         if (repeated) {
-                            p(setter + "(" + qualified(type, bufferCN) + ".parseFramed(input));");
+                            p(setter + "(" + qualified(type, factoryFeild) + ".parseFramed(input));");
                         } else {
                             p("if (has" + uname + "()) {");
                             indent();
-                            p("set" + uname + "(get" + uname + "().copy().mergeFrom(" + qualified(type, bufferCN) + ".parseFramed(input)));");
+                            p("set" + uname + "(get" + uname + "().copy().mergeFrom(" + qualified(type, factoryFeild) + ".parseFramed(input)));");
                             unindent();
                             p("} else {");
                             indent();
-                            p(setter + "(" + qualified(type, bufferCN) + ".parseFramed(input));");
+                            p(setter + "(" + qualified(type, factoryFeild) + ".parseFramed(input));");
                             unindent();
                             p("}");
                         }
@@ -1338,7 +1338,8 @@ public class AltJavaGenerator {
                 }
             } else {
 
-                String type = javaType(field);
+                String type = qualified(javaFactoryType(field.getTypeDescriptor()), getterCN);
+
                 // It's complex type...
                 if (field.isRepeated()) {
                     p("for(" + type + " element: other.get" + uname + "List() ) {");
@@ -1495,7 +1496,8 @@ public class AltJavaGenerator {
                 } else {
                     p("if( in.readBoolean() ) {");
                     indent();
-                    p("" + qualified(type, beanCN) + " o = new " + qualified(type, beanCN) + "();");
+                    String factoryType = javaFactoryType(field.getTypeDescriptor());
+                    p("" + qualified(factoryType, beanCN) + " o = new " + qualified(factoryType, beanCN) + "();");
                     p("o.readExternal(in);");
                     p("f_" + lname + " = o;");
                     unindent();
@@ -2242,7 +2244,7 @@ public class AltJavaGenerator {
         }
 
         TypeDescriptor descriptor = field.getTypeDescriptor();
-        return javaType(descriptor);
+        return qualified(javaFactoryType(descriptor), getterCN);
     }
 
     private String javaType(FieldDescriptor field) {
@@ -2286,10 +2288,10 @@ public class AltJavaGenerator {
         }
 
         TypeDescriptor descriptor = field.getTypeDescriptor();
-        return javaType(descriptor);
+        return qualified(javaFactoryType(descriptor), getterCN);
     }
 
-    private String javaType(TypeDescriptor descriptor) {
+    private String javaFactoryType(TypeDescriptor descriptor) {
         ProtoDescriptor p = descriptor.getProtoDescriptor();
         if (p != proto) {
             // Try to keep it short..

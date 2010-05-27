@@ -28,11 +28,11 @@ import java.io.*;
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
-public class PBMessageFramedCodec<T extends PBMessage> extends VariableCodec<T> {
+public class PBMessageFramedCodec<T extends MessageBuffer> extends VariableCodec<T> {
 
-    final private PBMessageFactory<? extends T, ? extends T> factory;
+    final private PBMessageFactory<?, ? extends T> factory;
 
-    public PBMessageFramedCodec(PBMessageFactory<? extends T, ? extends T> factory) {
+    public PBMessageFramedCodec(PBMessageFactory<?, ? extends T> factory) {
         this.factory = factory;
     }
 
@@ -41,11 +41,11 @@ public class PBMessageFramedCodec<T extends PBMessage> extends VariableCodec<T> 
     }
 
     public void encode(T value, DataOutput dataOut) throws IOException {
-        value.freeze().writeFramed((OutputStream) dataOut);
+        value.writeFramed((OutputStream) dataOut);
     }
 
     public int estimatedSize(T value) {
-        return value.freeze().serializedSizeFramed();
+        return value.serializedSizeFramed();
     }
 
     @Override
@@ -55,6 +55,6 @@ public class PBMessageFramedCodec<T extends PBMessage> extends VariableCodec<T> 
 
     @Override
     public T deepCopy(T value) {
-        return (T) value.freeze();
+        return (T) value;
     }
 }
