@@ -21,7 +21,7 @@
   
   <groupId>org.fusesource.hawtbuf</groupId>
   <artifactId>hawtbuf-project</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0</version>
   <packaging>pom</packaging>
   
   <name>HawtBuf Project</name>
