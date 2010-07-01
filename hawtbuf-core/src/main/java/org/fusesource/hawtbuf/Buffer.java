@@ -64,6 +64,10 @@ public class Buffer implements Comparable<Buffer> {
     public final byte[] getData() {
         return data;
     }
+    public final Buffer data(byte[] data) {
+        this.data = data;
+        return this;
+    }
 
     public final int getLength() {
         return length;
@@ -72,11 +76,19 @@ public class Buffer implements Comparable<Buffer> {
     public final int length() {
         return length;
     }
+    public final Buffer length(int length) {
+        this.length = length;
+        return this;
+    }
 
     public final int getOffset() {
         return offset;
     }
-    
+    public final Buffer offset(int offset) {
+        this.offset = offset;
+        return this;
+    }
+
     final public Buffer deepCopy() {
         byte t[] = new byte[length];
         System.arraycopy(data, offset, t, 0, length);

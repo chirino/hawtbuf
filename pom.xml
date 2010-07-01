@@ -28,7 +28,7 @@
 
   <description>
     HawtBuf is a suite of libraries to make it easier to work with byte buffers.  
-    It includes a simpler protobuf Java API ands java ant/maven based proto file compiler.
+    It includes a simpler protobuf Java API and a maven based proto file compiler.
   </description>
 
   <properties>
@@ -48,8 +48,10 @@
   <modules>
     <module>hawtbuf-core</module>
     <module>hawtbuf-proto</module>
+    <!-- these modules are not fully cooked yet.
     <module>hawtbuf-amqp-gen</module>
     <module>hawtbuf-amqp</module>
+    -->
   </modules>
   
   <url>http://${forge-project-id}.fusesource.org</url>
@@ -93,7 +95,8 @@
   </issueManagement>
   <scm>
     <connection>scm:git:git://forge.fusesource.com/${forge-project-id}.git</connection>
-    <developerConnection>scm:git:ssh://git@forge.fusesource.com/${forge-project-id}.git</developerConnection>
+    <!-- Work around for issue: http://jira.codehaus.org/browse/SCM-444 -->
+    <developerConnection>${release-altGitURL}</developerConnection>
     <url>http://fusesource.com/forge/gitweb?p=${forge-project-id}.git</url>
   </scm>
   <distributionManagement>
