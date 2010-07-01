@@ -25,22 +25,12 @@
   </parent>
 
   <groupId>org.fusesource.hawtbuf</groupId>
-  <artifactId>hawtbuf-core</artifactId>
+  <artifactId>hawtbuf</artifactId>
   <version>1.0-SNAPSHOT</version>
-  <packaging>jar</packaging>
+  <packaging>bundle</packaging>
 
   <name>HawtBuf :: Core</name>
 
-
-  <repositories>
-    <!-- For the JNA dependency -->
-    <repository>
-      <id>maven2-repository.dev.java.net</id>
-      <name>Java.net Maven  Repository </name>
-      <url>http://download.java.net/maven/2</url>
-    </repository>
-  </repositories>
-  
   <dependencies>
 
     <dependency>
@@ -68,6 +58,33 @@
   
   <build>
     <plugins>
+      
+      <plugin>
+         <groupId>org.apache.felix</groupId>
+         <artifactId>maven-bundle-plugin</artifactId>
+         <version>2.0.0</version>
+         <extensions>true</extensions>
+         <configuration>
+           <instructions>
+             <Implementation-Title>HawtBuf</Implementation-Title>
+             <Implementation-Vendor>FuseSource</Implementation-Vendor>
+             <Implementation-Vendor-Id>org.fusesource</Implementation-Vendor-Id>
+             <Implementation-Version>${pom.version}</Implementation-Version>
+             <Specification-Title>HawtBuf</Specification-Title>
+             <Specification-Vendor>FuseSource</Specification-Vendor>
+             <Specification-Version>${pom.version}</Specification-Version>
+             <Import-Package>
+               !org.fusesource.hawtbuf*,
+               org.apache.commons.logging.*;version="[1.1,2)",
+               *
+             </Import-Package>
+             <Export-Package>
+               org.fusesource.hawtbuf*;version=${pom.version};-split-package:=merge-first
+             </Export-Package>	     
+             <_versionpolicy>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy>
+           </instructions>
+         </configuration>
+      </plugin>
 
       <!-- Generate a test jar for the test cases in this package -->
       <plugin>
