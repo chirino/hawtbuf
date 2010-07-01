@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.fusesource.hawtbuf</groupId>
     <artifactId>hawtbuf-project</artifactId>
-    <version>1.0</version>
+    <version>1.1-SNAPSHOT</version>
   </parent>
 
   <groupId>org.fusesource.hawtbuf</groupId>
   <artifactId>hawtbuf</artifactId>
-  <version>1.0</version>
+  <version>1.1-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <name>HawtBuf :: Core</name>
