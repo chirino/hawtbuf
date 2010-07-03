@@ -188,7 +188,7 @@ public class Buffer implements Comparable<Buffer> {
     
     final public int indexOf(Buffer needle, int pos) {
         int max = length - needle.length;
-        for (int i = pos; i < max; i++) {
+        for (int i = pos; i <= max; i++) {
             if (matches(needle, i)) {
                 return i;
             }
