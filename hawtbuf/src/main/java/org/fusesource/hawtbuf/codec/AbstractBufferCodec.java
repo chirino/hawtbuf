@@ -51,8 +51,13 @@ abstract public class AbstractBufferCodec<T extends Buffer> extends VariableCode
         return true;
     }
 
+    @Override
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
+
     public int estimatedSize(T object) {
         return object.length+4;
     }
-    
+
 }

@@ -44,6 +44,11 @@ public class PBMessageFramedCodec<T extends MessageBuffer> extends VariableCodec
         value.writeFramed((OutputStream) dataOut);
     }
 
+    @Override
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
+
     public int estimatedSize(T value) {
         return value.serializedSizeFramed();
     }

@@ -57,6 +57,9 @@ public class FixedBufferCodec implements Codec<Buffer> {
         return true;
     }
 
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
     public int estimatedSize(Buffer object) {
         return size;
     }

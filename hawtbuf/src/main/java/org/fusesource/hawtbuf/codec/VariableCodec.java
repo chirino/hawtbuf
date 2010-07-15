@@ -37,4 +37,11 @@ abstract public class VariableCodec<T> implements Codec<T> {
         throw new UnsupportedOperationException();
     }
 
+    public boolean isEstimatedSizeSupported() {
+        return false;
+    }
+
+    public int estimatedSize(T object) {
+        throw new UnsupportedOperationException();
+    }
 }

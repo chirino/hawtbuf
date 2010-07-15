@@ -55,6 +55,10 @@ public class VarLongCodec implements Codec<Long> {
         throw new ProtocolException("Encountered a malformed variable int");
     }
 
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
+
     public int estimatedSize(Long object) {
         long value = object;
         if ((value & (0xffffffffffffffffL << 7)) == 0)

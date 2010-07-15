@@ -48,6 +48,10 @@ public class LongCodec implements Codec<Long> {
         return true;
     }
 
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
+
     public int estimatedSize(Long object) {
         return 8;
     }

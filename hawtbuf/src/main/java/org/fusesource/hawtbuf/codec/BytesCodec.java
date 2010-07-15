@@ -54,6 +54,10 @@ public class BytesCodec implements Codec<byte[]> {
         return true;
     }
 
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
+
     public int estimatedSize(byte[] object) {
         return object.length+4;
     }

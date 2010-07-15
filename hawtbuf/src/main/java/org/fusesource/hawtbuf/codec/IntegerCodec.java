@@ -52,6 +52,9 @@ public class IntegerCodec implements Codec<Integer> {
         return true;
     }
 
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
     public int estimatedSize(Integer object) {
         return 4;
     }

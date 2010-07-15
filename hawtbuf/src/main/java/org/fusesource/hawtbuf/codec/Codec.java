@@ -49,6 +49,12 @@ public interface Codec<T> {
     int getFixedSize();
     
     /**
+     *
+     * @return true if the {@link #estimatedSize(Object)} operation is supported.
+     */
+    boolean isEstimatedSizeSupported();
+
+    /**
      * @param object
      * @return the estimated marshaled size of the object.
      */

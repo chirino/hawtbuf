@@ -44,6 +44,11 @@ public class PBMessageUnframedCodec<T extends MessageBuffer> extends VariableCod
         value.writeUnframed((OutputStream) dataOut);
     }
 
+    @Override
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
+
     public int estimatedSize(T value) {
         return value.serializedSizeUnframed();
     }

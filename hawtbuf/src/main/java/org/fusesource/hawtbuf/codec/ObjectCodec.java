@@ -30,16 +30,6 @@ import java.io.ObjectOutputStream;
  */
 public class ObjectCodec<T> extends VariableCodec<T> {
 
-    private int estimatedSize;
-
-    public int getEstimatedSize() {
-        return estimatedSize;
-    }
-
-    public void setEstimatedSize(int estimatedSize) {
-        this.estimatedSize = estimatedSize;
-    }
-
     public void encode(Object object, DataOutput dataOut) throws IOException {
         ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
         ObjectOutputStream objectOut = new ObjectOutputStream(bytesOut);
@@ -61,10 +51,6 @@ public class ObjectCodec<T> extends VariableCodec<T> {
         } catch (ClassNotFoundException e) {
             throw new IOException(e.getMessage());
         }
-    }
-
-    public int estimatedSize(Object object) {
-        return estimatedSize;
     }
     
 }

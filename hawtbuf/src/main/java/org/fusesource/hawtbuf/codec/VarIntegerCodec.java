@@ -90,6 +90,10 @@ public class VarIntegerCodec implements Codec<Integer> {
         return true;
     }
 
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
+
     public int estimatedSize(Integer x) {
         int value = x;
         if ((value & (0xffffffff << 7)) == 0)

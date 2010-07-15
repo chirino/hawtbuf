@@ -63,6 +63,10 @@ public class StringCodec implements Codec<String> {
         return true;
     }
 
+    public boolean isEstimatedSizeSupported() {
+        return true;
+    }
+
     public int estimatedSize(String object) {
         return object.length()+2;
     }
