@@ -17,19 +17,20 @@
 package org.fusesource.hawtbuf.codec;
 
 import org.fusesource.hawtbuf.AsciiBuffer;
+import org.fusesource.hawtbuf.UTF8Buffer;
 
 /**
- * Implementation of a Codec for AsciiBuffer objects.
+ * Implementation of a Codec for UTF8Buffer objects.
  *
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  *
  */
-public class AsciiBufferCodec extends AbstractBufferCodec<AsciiBuffer> {
-    public static final AsciiBufferCodec INSTANCE = new AsciiBufferCodec();
+public class UTF8BufferCodec extends AbstractBufferCodec<UTF8Buffer> {
+    public static final UTF8BufferCodec INSTANCE = new UTF8BufferCodec();
 
     @Override
-    protected AsciiBuffer createBuffer(byte[] data) {
-        return new AsciiBuffer(data);
+    protected UTF8Buffer createBuffer(byte[] data) {
+        return new UTF8Buffer(data);
     }
     
 }

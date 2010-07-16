@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.fusesource.hawtbuf.Buffer;
 
 /**
- * Implementation of a Marshaller for Buffer objects
+ * Implementation of a Codec for Buffer objects
  * 
  * @author <a href="http://hiramchirino.com">Hiram Chirino</a>
  */
