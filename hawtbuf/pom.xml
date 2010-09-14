@@ -79,7 +79,9 @@
              </Import-Package>
              <Export-Package>
                org.fusesource.hawtbuf*;version=${pom.version};-split-package:=merge-first
-             </Export-Package>	     
+             </Export-Package>
+               <!-- to allow to de-serialize classes using ObjectCodec -->
+             <DynamicImport-Package>*</DynamicImport-Package>
              <_versionpolicy>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy>
            </instructions>
          </configuration>

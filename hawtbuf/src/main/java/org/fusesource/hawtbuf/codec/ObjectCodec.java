@@ -49,8 +49,14 @@ public class ObjectCodec<T> extends VariableCodec<T> {
         try {
             return (T) objectIn.readObject();
         } catch (ClassNotFoundException e) {
-            throw new IOException(e.getMessage());
+            throw createIOException(e.getMessage(), e);
         }
+    }
+
+    private static IOException createIOException(String message, Throwable cause) {
+        IOException answer = new IOException(message);
+        answer.initCause(cause);
+        return answer;
     }
     
 }
