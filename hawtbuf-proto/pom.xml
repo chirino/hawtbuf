@@ -21,12 +21,12 @@
   <parent>
     <groupId>org.fusesource.hawtbuf</groupId>
     <artifactId>hawtbuf-project</artifactId>
-    <version>1.2-SNAPSHOT</version>
+    <version>1.2</version>
   </parent>
 
   <groupId>org.fusesource.hawtbuf</groupId>
   <artifactId>hawtbuf-proto</artifactId>
-  <version>1.2-SNAPSHOT</version>
+  <version>1.2</version>
   <packaging>maven-plugin</packaging>
   
   <name>HawtBuf :: Proto</name>
@@ -39,7 +39,7 @@
     <dependency>
       <groupId>org.fusesource.hawtbuf</groupId>
       <artifactId>hawtbuf</artifactId>
-      <version>1.2-SNAPSHOT</version>
+      <version>1.2</version>
     </dependency>
 
     <dependency>
