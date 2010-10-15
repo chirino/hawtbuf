@@ -73,6 +73,13 @@ public class AmqpMojo extends AbstractMojo {
      */
     private File testOutputDirectory;
 
+    /**
+     * The package prefix to put the generated Java classes in
+     *
+     * @parameter default-value="org.fusesource.hawtbuf.amqp.protocol"
+     */
+    private String packagePrefix;
+
 
     public void execute() throws MojoExecutionException {
 
@@ -116,9 +123,11 @@ public class AmqpMojo extends AbstractMojo {
                 Generator gen = new Generator();
                 gen.setInputFiles(mainFiles);
                 gen.setOutputDirectory(outputDir);
-//                gen.setSourceDirectory(sourceDir);
+                gen.setPackagePrefix(packagePrefix);
+                //gen.setSourceDirectory(mainSourceDirectory);
                 gen.generate();
             } catch (Exception e) {
+                getLog().error("Error generating code : " + e.getMessage());
                 throw new MojoExecutionException(e.getMessage(), e);
             }
         }

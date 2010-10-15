@@ -42,7 +42,7 @@ public class Generator {
     private File[] inputFiles;
     private File outputDirectory;
     private File sourceDirectory;
-    private String packagePrefix = "org.fusesource.hawtbuf.amqp.protocol";
+    private String packagePrefix;
 
     public static final HashSet<String> CONTROLS = new HashSet<String>();
     public static final HashSet<String> COMMANDS = new HashSet<String>();
