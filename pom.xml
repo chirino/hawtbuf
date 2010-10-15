@@ -53,10 +53,8 @@
   <modules>
     <module>hawtbuf</module>
     <module>hawtbuf-proto</module>
-    <!-- these modules are not fully cooked yet.
     <module>hawtbuf-amqp-gen</module>
     <module>hawtbuf-amqp</module>
-    -->
   </modules>
   
   <url>http://${forge-project-id}.fusesource.org</url>
