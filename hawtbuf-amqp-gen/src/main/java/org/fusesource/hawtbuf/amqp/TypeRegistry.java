@@ -26,7 +26,9 @@ public class TypeRegistry {
         JAVA_TYPE_MAP.put("int", new JavaTypeMapping("int", "java.lang.Integer", "int"));
         JAVA_TYPE_MAP.put("long", new JavaTypeMapping("long", "java.lang.Long", "long"));
         JAVA_TYPE_MAP.put("float", new JavaTypeMapping("float", "java.lang.Float", "float"));
+        JAVA_TYPE_MAP.put("decimal32", new JavaTypeMapping("decimal32", "java.lang.Float", "float"));
         JAVA_TYPE_MAP.put("double", new JavaTypeMapping("double", "java.lang.Double", "double"));
+        JAVA_TYPE_MAP.put("decimal64", new JavaTypeMapping("decimal64", "java.lang.Double", "double"));
         JAVA_TYPE_MAP.put("char", new JavaTypeMapping("char", "java.lang.Integer", "int"));
         JAVA_TYPE_MAP.put("timestamp", new JavaTypeMapping("timestamp", "java.util.Date"));
         JAVA_TYPE_MAP.put("uuid", new JavaTypeMapping("uuid", "java.util.UUID"));
