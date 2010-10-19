@@ -44,6 +44,14 @@ public class AmqpMojo extends AbstractMojo {
     protected MavenProject project;
 
     /**
+     * The directory containing the project source
+     *
+     * @parameter default=value="${basedir}/src/main/java"
+     *
+     */
+    private File sourceDirectory;
+
+    /**
      * The directory where the amqp spec files (<code>*.xml</code>) are
      * located.
      *
@@ -80,6 +88,12 @@ public class AmqpMojo extends AbstractMojo {
      */
     private String packagePrefix;
 
+    /**
+     * Path to hand-coded sources
+     *
+     * @parameter default-value="org/fusesource/hawtbuf/amqp/generator/handcoded"
+     */
+    private String handCodedSource;
 
     public void execute() throws MojoExecutionException {
 
@@ -123,11 +137,12 @@ public class AmqpMojo extends AbstractMojo {
                 Generator gen = new Generator();
                 gen.setInputFiles(mainFiles);
                 gen.setOutputDirectory(outputDir);
+                gen.setSourceDirectory(sourceDirectory);
                 gen.setPackagePrefix(packagePrefix);
-                //gen.setSourceDirectory(mainSourceDirectory);
+                gen.setHandCodedSource(handCodedSource);
                 gen.generate();
             } catch (Exception e) {
-                getLog().error("Error generating code : " + e.getMessage());
+                getLog().error("Error generating code : " + e + " - " + e.getMessage());
                 throw new MojoExecutionException(e.getMessage(), e);
             }
         }

@@ -43,6 +43,7 @@ public class Generator {
     private File outputDirectory;
     private File sourceDirectory;
     private String packagePrefix;
+    private String handCodedSource;
 
     public static final HashSet<String> CONTROLS = new HashSet<String>();
     public static final HashSet<String> COMMANDS = new HashSet<String>();
@@ -74,6 +75,14 @@ public class Generator {
 
     public void setPackagePrefix(String packagePrefix) {
         this.packagePrefix = packagePrefix;
+    }
+
+    public String getHandCodedSource() {
+        return handCodedSource;
+    }
+
+    public void setHandCodedSource(String handCodedSource) {
+        this.handCodedSource = handCodedSource;
     }
 
     public void generate() throws Exception {
@@ -150,7 +159,6 @@ public class Generator {
 
         if( sourceDirectory!=null ) {
             // Copy handcoded:
-            String handCodedSource = "org/apache/activemq/amqp/generator/handcoded";
             String outputPackage = packagePrefix.replace(".", SLASH);
             File sourceDir = new File(sourceDirectory + SLASH + handCodedSource);
             for (File javaFile : Utils.findFiles(sourceDir)) {
@@ -165,7 +173,8 @@ public class Generator {
                 BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 
                 while (line != null) {
-                    line = line.replace("org.apache.activemq.amqp.generator.handcoded", packagePrefix);
+                    String thePackage = handCodedSource.replace(SLASH,".");
+                    line = line.replace(thePackage, packagePrefix);
                     writer.write(line);
                     writer.newLine();
                     line = reader.readLine();
