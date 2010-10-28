@@ -255,6 +255,15 @@ abstract public class BufferEditor {
 
     abstract public void writeRawFloat(float v);
 
+
+    static public BufferEditor big(Buffer buffer) {
+        return new BigEndianBufferEditor(buffer);
+    }
+    
+    static public BufferEditor little(Buffer buffer) {
+        return new LittleEndianBufferEditor(buffer);
+    }
+
     static class BigEndianBufferEditor extends BufferEditor {
 
         BigEndianBufferEditor(Buffer buffer) {
