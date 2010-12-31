@@ -1,5 +1,6 @@
 package org.fusesource.hawtbuf.proto;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -50,7 +51,17 @@ final public class MessageBufferSupport {
     }
 
     public static Buffer readFrame(java.io.InputStream input) throws IOException {
-        int length = readRawVarint32(input);
+        int length = 0;
+        try {
+            length = readRawVarint32(input);
+        } catch (InvalidProtocolBufferException e) {
+            if( e.isEOF() ) {
+                throw new EOFException();
+            } else {
+                throw e;
+            }
+        }
+
         byte[] data = new byte[length];
         int pos = 0;
         while (pos < length) {
@@ -104,7 +115,7 @@ final public class MessageBufferSupport {
         int rc = is.read();
         if (rc == -1) {
             throw new InvalidProtocolBufferException("While parsing a protocol message, the input ended unexpectedly " + "in the middle of a field.  This could mean either than the " + "input has been truncated or that an embedded message "
-                    + "misreported its own length.");
+                    + "misreported its own length.", true);
         }
         return (byte) rc;
     }

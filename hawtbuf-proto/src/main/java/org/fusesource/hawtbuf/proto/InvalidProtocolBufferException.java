@@ -26,9 +26,19 @@ import java.io.IOException;
  */
 public class InvalidProtocolBufferException extends IOException {
     private static final long serialVersionUID = 5685337441004132240L;
+    private final Boolean eof;
 
     public InvalidProtocolBufferException(String description) {
+        this(description, false);
+    }
+
+    public InvalidProtocolBufferException(String description, Boolean eof) {
         super(description);
+        this.eof = eof;
+    }
+
+    public Boolean isEOF() {
+        return eof;
     }
 
     static InvalidProtocolBufferException truncatedMessage() {
