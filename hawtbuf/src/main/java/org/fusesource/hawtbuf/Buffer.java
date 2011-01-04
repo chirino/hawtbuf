@@ -356,8 +356,8 @@ public class Buffer implements Comparable<Buffer> {
             int pos = offset;
             int limit = minLength + offset;
             while (pos < limit) {
-                byte b1 = data[pos];
-                byte b2 = oData[pos];
+                int b1 = 0xFF & data[pos];
+                int b2 = 0xFF & oData[pos];
                 if (b1 != b2) {
                     return b1 - b2;
                 }
@@ -367,8 +367,8 @@ public class Buffer implements Comparable<Buffer> {
             int offset1 = offset;
             int offset2 = oOffset;
             while ( minLength-- != 0) {
-                byte b1 = data[offset1++];
-                byte b2 = oData[offset2++];
+                int b1 = 0xFF & data[offset1++];
+                int b2 = 0xFF & oData[offset2++];
                 if (b1 != b2) {
                     return b1 - b2;
                 }
