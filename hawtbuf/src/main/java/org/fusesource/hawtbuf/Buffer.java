@@ -48,6 +48,22 @@ public class Buffer implements Comparable<Buffer> {
         this.length = length;
     }
 
+    public String hex() {
+        return HexSupport.toHexFromBuffer(this);
+    }
+
+    public final Buffer flip() {
+        length = offset;
+        offset = 0;
+        return this;
+    }
+
+    public final Buffer clear() {
+        length = data.length;
+        offset = 0;
+        return this;
+    }
+
 	public final Buffer slice(int low, int high) {
         int sz;
         if (high < 0) {
@@ -443,7 +459,4 @@ public class Buffer implements Comparable<Buffer> {
         return UTF8Buffer.utf8(buffer);
     }
 
-    public String hex() {
-        return HexSupport.toHexFromBuffer(this);
-    }
 }
