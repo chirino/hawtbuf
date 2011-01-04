@@ -442,4 +442,8 @@ public class Buffer implements Comparable<Buffer> {
     public static UTF8Buffer utf8(Buffer buffer) {
         return UTF8Buffer.utf8(buffer);
     }
+
+    public String hex() {
+        return HexSupport.toHexFromBuffer(this);
+    }
 }
