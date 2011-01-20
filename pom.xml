@@ -21,7 +21,7 @@
   <parent>
     <groupId>org.fusesource</groupId>
     <artifactId>fusesource-pom</artifactId>
-    <version>1.0</version>
+    <version>1.2</version>
   </parent>
   
   <groupId>org.fusesource.hawtbuf</groupId>
@@ -301,10 +301,6 @@
         <repository>
           <id>java.net</id>
           <url>http://download.java.net/maven/2</url>
-        </repository>
-        <repository>
-          <id>fluido-skin</id>
-          <url>http://fluido-skin.googlecode.com/svn/repo/</url>
         </repository>
       </repositories>
     </profile>
