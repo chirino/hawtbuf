@@ -59,7 +59,7 @@
       </plugin>
       <plugin>
         <groupId>org.fusesource.hawtbuf</groupId>
-        <artifactId>hawtbuf-proto</artifactId>
+        <artifactId>hawtbuf-protoc</artifactId>
         <version>@project.version@</version>
          <executions>
           <execution>
