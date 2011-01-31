@@ -31,10 +31,7 @@
   
   <name>${project.artifactId}</name>
 
-  <description>
-    HawtBuf is a suite of libraries to make it easier to work with byte buffers.  
-    It includes a simpler protobuf Java API and a maven based proto file compiler.
-  </description>
+  <description>HawtBuf: a rich byte buffer library</description>
 
   <properties>
     <forge-project-id>hawtbuf</forge-project-id>
@@ -124,17 +121,17 @@
         <inherited>true</inherited>
         <configuration>
           <instructions>
+            <Implementation-Title>${project.description}</Implementation-Title>
+            <Implementation-Version>${project.version}</Implementation-Version>
             <Bundle-Name>${project.artifactId}</Bundle-Name>
             <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
             <Export-Package>{local-packages};version=${project.version};-noimport:=true</Export-Package>
             <Import-Package>*</Import-Package>
             <Private-Package>!*</Private-Package>
-            <Implementation-Title>HawtBuf</Implementation-Title>
-            <Implementation-Version>${project.version}</Implementation-Version>
             <_versionpolicy-impl>[$(version;==;$(@)),$(version;=+;$(@)))</_versionpolicy-impl>
             <_versionpolicy-uses>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy-uses>
             <_versionpolicy>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy>
-            <_failok>${apollo.osgi.failok}</_failok>
+            <_failok>false</_failok>
           </instructions>
         </configuration>
       </plugin>

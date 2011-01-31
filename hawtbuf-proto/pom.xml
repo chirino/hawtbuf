@@ -29,11 +29,7 @@
   <version>1.4-SNAPSHOT</version>
   <packaging>bundle</packaging>
   
-  <name>${project.artifactId}</name>
-
-  <description>
-    A Simpler Protocol Buffer Java API.
-  </description>
+  <description>HawtBuf Proto: A protobuf library</description>
 
   <dependencies>
     <dependency>

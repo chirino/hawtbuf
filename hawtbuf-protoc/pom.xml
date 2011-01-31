@@ -31,9 +31,7 @@
   
   <name>${project.artifactId}</name>
 
-  <description>
-    The HawtBuf Proto compiler.
-  </description>
+  <description>HawtBuf Protoc: A protobuf compiler as a maven plugin</description>
 
   <dependencies>
     <dependency>
