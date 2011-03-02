@@ -543,7 +543,7 @@ public class AltJavaGenerator {
         return type.equals("org.fusesource.hawtbuf.AsciiBuffer") ||
                 type.equals("org.fusesource.hawtbuf.UTF8Buffer") ||
                 type.equals("org.fusesource.hawtbuf.Buffer") ||
-                type.equals("String");
+                type.equals("java.lang.String");
     }
 
     /**
