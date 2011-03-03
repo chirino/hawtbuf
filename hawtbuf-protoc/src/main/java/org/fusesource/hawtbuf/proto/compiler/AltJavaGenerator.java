@@ -557,7 +557,7 @@ public class AltJavaGenerator {
         for (FieldDescriptor field : m.getFields().values()) {
             String lname = lCamel(field.getName());
             String type = field.getRule() == FieldDescriptor.REPEATED_RULE ? javaCollectionType(field) : javaType(field);
-            boolean primitive = isPrimitive(type);
+            boolean primitive = isPrimitive(javaType(field));
             if (field.isRepeated()) {
                 if (primitive || isBuferOrString(type) || field.getTypeDescriptor().isEnum()) {
                     p("this.f_" + lname + " = other.f_" + lname + ";");
