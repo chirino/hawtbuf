@@ -21,7 +21,7 @@
   <parent>
     <groupId>org.fusesource</groupId>
     <artifactId>fusesource-pom</artifactId>
-    <version>1.2</version>
+    <version>1.4</version>
   </parent>
   
   <groupId>org.fusesource.hawtbuf</groupId>
@@ -45,7 +45,6 @@
     <jaxb-api-version>2.1</jaxb-api-version>
     <jaxb-version>2.1.6</jaxb-version>
     <xjc-version>2.1.10.1</xjc-version>
-    <maven-bundle-plugin-version>2.3.0-SNAPSHOT</maven-bundle-plugin-version>
   </properties>
   
   <modules>
@@ -116,7 +115,7 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>${maven-bundle-plugin-version}</version>
+        <version>2.3.4</version>
         <extensions>true</extensions>
         <inherited>true</inherited>
         <configuration>

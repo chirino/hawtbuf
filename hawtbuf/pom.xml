@@ -58,35 +58,6 @@
   <build>
     <plugins>
       
-      <plugin>
-         <groupId>org.apache.felix</groupId>
-         <artifactId>maven-bundle-plugin</artifactId>
-         <version>2.0.0</version>
-         <extensions>true</extensions>
-         <configuration>
-           <instructions>
-             <Implementation-Title>HawtBuf</Implementation-Title>
-             <Implementation-Vendor>FuseSource</Implementation-Vendor>
-             <Implementation-Vendor-Id>org.fusesource</Implementation-Vendor-Id>
-             <Implementation-Version>${pom.version}</Implementation-Version>
-             <Specification-Title>HawtBuf</Specification-Title>
-             <Specification-Vendor>FuseSource</Specification-Vendor>
-             <Specification-Version>${pom.version}</Specification-Version>
-             <Import-Package>
-               !org.fusesource.hawtbuf*,
-               org.apache.commons.logging.*;version="[1.1,2)",
-               *
-             </Import-Package>
-             <Export-Package>
-               org.fusesource.hawtbuf*;version=${pom.version};-split-package:=merge-first
-             </Export-Package>
-               <!-- to allow to de-serialize classes using ObjectCodec -->
-             <DynamicImport-Package>*</DynamicImport-Package>
-             <_versionpolicy>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy>
-           </instructions>
-         </configuration>
-      </plugin>
-
       <!-- Generate a test jar for the test cases in this package -->
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
