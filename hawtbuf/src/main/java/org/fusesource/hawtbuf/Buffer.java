@@ -30,6 +30,10 @@ public class Buffer implements Comparable<Buffer> {
     public int offset;
     public int length;
 
+    public Buffer(ByteBuffer other) {
+        this(other.array(), other.arrayOffset()+other.position(), other.remaining());
+    }
+
     public Buffer(Buffer other) {
         this(other.data, other.offset, other.length);
     }

@@ -16,10 +16,7 @@
  */
 package org.fusesource.hawtbuf;
 
-import java.io.DataInput;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UTFDataFormatException;
+import java.io.*;
 
 
 /**
@@ -32,6 +29,19 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
     private int pos;
     private int offset;
     private int length;
+
+    protected AbstractVarIntSupport helper = new AbstractVarIntSupport() {
+
+        @Override
+        protected byte readByte() throws IOException {
+            return DataByteArrayInputStream.this.readByte();
+        }
+
+        @Override
+        protected void writeByte(int value) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+    };
 
     /**
      * Creates a <code>StoreByteArrayInputStream</code>.
@@ -336,5 +346,21 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
 
     public void setLength(int length) {
         this.length = length;
+    }
+
+    public int readVarInt() throws IOException {
+        return helper.readVarInt();
+    }
+
+    public long readVarLong() throws IOException {
+        return helper.readVarLong();
+    }
+
+    public int readVarSignedInt() throws IOException {
+        return helper.readVarSignedInt();
+    }
+
+    public long readVarSignedLong() throws IOException {
+        return helper.readVarSignedLong();
     }
 }

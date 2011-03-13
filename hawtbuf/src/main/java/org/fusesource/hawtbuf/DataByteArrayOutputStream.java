@@ -32,6 +32,18 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
     protected byte buf[];
     protected int pos;
 
+    protected AbstractVarIntSupport helper = new AbstractVarIntSupport() {
+        @Override
+        protected byte readByte() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected void writeByte(int value) throws IOException {
+            DataByteArrayOutputStream.this.writeByte(value);
+        }
+    };
+
     /**
      * Creates a new byte array output stream, with a buffer capacity of the
      * specified size, in bytes.
@@ -98,6 +110,10 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
         buf[pos] = (byte)b;
         pos = newcount;
         onWrite();
+    }
+
+    public void write(Buffer data) throws IOException {
+        write(data.data, data.offset, data.length);
     }
 
     /**
@@ -294,4 +310,19 @@ public class DataByteArrayOutputStream extends OutputStream implements DataOutpu
         onWrite();
     }
 
+    public void writeVarInt(int value) throws IOException {
+        helper.writeVarInt(value);
+    }
+
+    public void writeVarLong(long value) throws IOException {
+        helper.writeVarLong(value);
+    }
+
+    public void writeVarSignedInt(int value) throws IOException {
+        helper.writeVarSignedInt(value);
+    }
+
+    public void writeVarSignedLong(long value) throws IOException {
+        helper.writeVarSignedLong(value);
+    }
 }
