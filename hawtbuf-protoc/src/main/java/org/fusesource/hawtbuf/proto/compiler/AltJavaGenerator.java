@@ -1425,7 +1425,8 @@ public class AltJavaGenerator {
                 } else if (field.getTypeDescriptor().isEnum()) {
                     p("f_" + lname + ".add(" + type + ".valueOf(in.readShort()));");
                 } else {
-                    p("" + qualified(type, beanCN) + " o = new " + qualified(type, beanCN) + "();");
+                    String beanName = qualified(javaFactoryType(field.getTypeDescriptor()), beanCN);
+                    p(beanName + " o = new " + beanName + "();");
                     p("o.readExternal(in);");
                     p("f_" + lname + ".add(o);");
                 }
