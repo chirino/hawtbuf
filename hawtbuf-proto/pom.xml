@@ -21,12 +21,12 @@
   <parent>
     <groupId>org.fusesource.hawtbuf</groupId>
     <artifactId>hawtbuf-project</artifactId>
-    <version>1.5</version>
+    <version>1.6-SNAPSHOT</version>
   </parent>
 
   <groupId>org.fusesource.hawtbuf</groupId>
   <artifactId>hawtbuf-proto</artifactId>
-  <version>1.5</version>
+  <version>1.6-SNAPSHOT</version>
   <packaging>bundle</packaging>
   
   <description>HawtBuf Proto: A protobuf library</description>
@@ -35,7 +35,7 @@
     <dependency>
       <groupId>org.fusesource.hawtbuf</groupId>
       <artifactId>hawtbuf</artifactId>
-      <version>1.5</version>
+      <version>1.6-SNAPSHOT</version>
     </dependency>
     
     <dependency>
