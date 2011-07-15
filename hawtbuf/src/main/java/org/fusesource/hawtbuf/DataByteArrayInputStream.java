@@ -143,7 +143,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
      *         stream has been reached.
      */
     public int read() {
-        return (pos < length) ? (buf[pos++] & 0xff) : -1;
+        return (pos < offset+length) ? (buf[pos++] & 0xff) : -1;
     }
 
     /**
@@ -161,10 +161,11 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
         if (b == null) {
             throw new NullPointerException();
         }
-        if (pos >= length) {
+        int endpos = offset + length;
+        if (pos >= endpos) {
             return -1;
         }
-        if (pos + len > length) {
+        if (pos + len > endpos) {
             len = length - pos;
         }
         if (len <= 0) {
@@ -180,7 +181,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
      *         without blocking.
      */
     public int available() {
-        return length - pos;
+        return offset + length - pos;
     }
 
     public void readFully(byte[] b) {
@@ -192,8 +193,9 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
     }
 
     public int skipBytes(int n) {
-        if (pos + n > length) {
-            n = length - pos;
+        int endpos = offset + length;
+        if (pos + n > endpos) {
+            n = endpos - pos;
         }
         if (n < 0) {
             return 0;
@@ -255,7 +257,7 @@ public final class DataByteArrayInputStream extends InputStream implements DataI
 
     public String readLine() {
         int start = pos;
-        while (pos < length) {
+        while (pos < offset+length) {
             int c = read();
             if (c == '\n') {
                 break;
