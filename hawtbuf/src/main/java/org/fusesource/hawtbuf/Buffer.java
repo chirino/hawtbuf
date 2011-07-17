@@ -47,6 +47,8 @@ public class Buffer implements Comparable<Buffer> {
     }
 
     public Buffer(byte data[], int offset, int length) {
+        assert data!=null : "data cannot be null";
+        assert data.length < offset+length : String.format("offset %d + length %d must be <= the data.length %d",offset, length, data.length);
         this.data = data;
         this.offset = offset;
         this.length = length;
@@ -59,6 +61,23 @@ public class Buffer implements Comparable<Buffer> {
     public final Buffer flip() {
         length = offset;
         offset = 0;
+        return this;
+    }
+
+    public final Buffer moveHead(int value) {
+        assert value <= length : "Head position cannot be advanced past the tail";
+        int newOffset = offset+value;
+        assert newOffset >= 0 : "Head position cannot be moved back past the start of the buffer";
+        offset = newOffset;
+        length -= value;
+        return this;
+    }
+
+    public final Buffer moveTail(int value) {
+        int newLength = length+value;
+        assert offset+newLength <= data.length : "Tail position cannot be advanced past the end of the buffer";
+        assert newLength >= 0 : "Tail position cannot be moved back past head of the buffer";
+        length = newLength;
         return this;
     }
 
