@@ -48,7 +48,7 @@ public class Buffer implements Comparable<Buffer> {
 
     public Buffer(byte data[], int offset, int length) {
         assert data!=null : "data cannot be null";
-        assert data.length < offset+length : String.format("offset %d + length %d must be <= the data.length %d",offset, length, data.length);
+        assert offset+length <= data.length : String.format("offset %d + length %d must be <= the data.length %d",offset, length, data.length);
         this.data = data;
         this.offset = offset;
         this.length = length;
