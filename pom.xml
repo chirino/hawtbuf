@@ -45,6 +45,8 @@
     <jaxb-api-version>2.1</jaxb-api-version>
     <jaxb-version>2.1.6</jaxb-version>
     <xjc-version>2.1.10.1</xjc-version>
+    <hawtbuf.osgi.import>*</hawtbuf.osgi.import>
+    <hawtbuf.osgi.private>!*</hawtbuf.osgi.private>
   </properties>
   
   <modules>
@@ -125,8 +127,9 @@
             <Bundle-Name>${project.artifactId}</Bundle-Name>
             <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
             <Export-Package>{local-packages};version=${project.version};-noimport:=true</Export-Package>
-            <Import-Package>*</Import-Package>
-            <Private-Package>!*</Private-Package>
+            <Import-Package>${hawtbuf.osgi.import}</Import-Package>
+            <Private-Package>${hawtbuf.osgi.private}</Private-Package>
+            <DynamicImport-Package>${hawtbuf.osgi.dynamic}</DynamicImport-Package>
             <_versionpolicy-impl>[$(version;==;$(@)),$(version;=+;$(@)))</_versionpolicy-impl>
             <_versionpolicy-uses>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy-uses>
             <_versionpolicy>[$(version;==;$(@)),$(version;+;$(@)))</_versionpolicy>

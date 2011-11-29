@@ -29,6 +29,10 @@
   <packaging>bundle</packaging>
 
   <name>${project.artifactId}</name>
+  <properties>
+     <!-- The ObjectInputStream need to load the class outside of the bundle -->
+     <hawtbuf.osgi.dynamic>*</hawtbuf.osgi.dynamic>
+  </properties>
 
   <dependencies>
 
